@@ -72,3 +72,10 @@ these additional notices to be distributed.  License copyright years may be
 listed using range notation, e.g., 1996-2015, indicating that every year in
 the range, inclusive, is a copyrightable year that would otherwise be listed
 individually.
+
+############################################################################
+
+Why I forked this
+=================
+
+This would have all the important C and C++ libraries I need for Platypus OS 😅
