@@ -16,6 +16,7 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -26,11 +27,15 @@
 #include <sys/param.h>
 #include <not-cancel.h>
 #include <ldsodefs.h>
+#include <sysconf-sigstksz.h>
 
 /* Legacy value of ARG_MAX.  The macro is now not defined since the
    actual value varies based on the stack size.  */
 #define legacy_ARG_MAX 131072
 
+/* Newer kernels (4.13) limit the maximum command line arguments lengths to
+   6MiB.  */
+#define maximum_ARG_MAX (6 * 1024 * 1024)
 
 static long int posix_sysconf (int name);
 
@@ -53,7 +58,10 @@ __sysconf (int name)
         struct rlimit rlimit;
         /* Use getrlimit to get the stack limit.  */
         if (__getrlimit (RLIMIT_STACK, &rlimit) == 0)
-	  return MAX (legacy_ARG_MAX, rlimit.rlim_cur / 4);
+	  {
+	    const long int limit = MAX (legacy_ARG_MAX, rlimit.rlim_cur / 4);
+	    return MIN (limit, maximum_ARG_MAX);
+	  }
 
         return legacy_ARG_MAX;
       }
@@ -74,6 +82,13 @@ __sysconf (int name)
         procfname = "/proc/sys/kernel/rtsig-max";
       }
       break;
+
+    case _SC_MINSIGSTKSZ:
+      assert (GLRO(dl_minsigstacksize) != 0);
+      return GLRO(dl_minsigstacksize);
+
+    case _SC_SIGSTKSZ:
+      return sysconf_sigstksz ();
 
     default:
       break;

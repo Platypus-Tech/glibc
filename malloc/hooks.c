@@ -68,7 +68,7 @@ __malloc_check_init (void)
    tags, so fetch the tag at each location before dereferencing
    it.  */
 #define SAFE_CHAR_OFFSET(p,offset) \
-  ((unsigned char *) TAG_AT (((unsigned char *) p) + offset))
+  ((unsigned char *) tag_at (((unsigned char *) p) + offset))
 
 /* A simple, standard set of debugging hooks.  Overhead is `only' one
    byte per chunk; still this will catch most cases of double frees or
@@ -102,7 +102,7 @@ malloc_check_get_size (mchunkptr p)
 
   assert (using_malloc_checking == 1);
 
-  for (size = CHUNK_AVAILABLE_SIZE (p) - 1;
+  for (size = CHUNK_HDR_SZ + memsize (p) - 1;
        (c = *SAFE_CHAR_OFFSET (p, size)) != magic;
        size -= c)
     {
@@ -130,7 +130,7 @@ mem2mem_check (void *ptr, size_t req_sz)
 
   p = mem2chunk (ptr);
   magic = magicbyte (p);
-  max_sz = CHUNK_AVAILABLE_SIZE (p) - CHUNK_HDR_SZ;
+  max_sz = memsize (p);
 
   for (i = max_sz - 1; i > req_sz; i -= block_sz)
     {
@@ -175,7 +175,7 @@ mem2chunk_check (void *mem, unsigned char **magic_p)
                                next_chunk (prev_chunk (p)) != p)))
         return NULL;
 
-      for (sz = CHUNK_AVAILABLE_SIZE (p) - 1;
+      for (sz = CHUNK_HDR_SZ + memsize (p) - 1;
 	   (c = *SAFE_CHAR_OFFSET (p, sz)) != magic;
 	   sz -= c)
         {
@@ -200,7 +200,7 @@ mem2chunk_check (void *mem, unsigned char **magic_p)
           ((prev_size (p) + sz) & page_mask) != 0)
         return NULL;
 
-      for (sz = CHUNK_AVAILABLE_SIZE (p) - 1;
+      for (sz = CHUNK_HDR_SZ + memsize (p) - 1;
 	   (c = *SAFE_CHAR_OFFSET (p, sz)) != magic;
 	   sz -= c)
         {
@@ -249,7 +249,7 @@ malloc_check (size_t sz, const void *caller)
   top_check ();
   victim = _int_malloc (&main_arena, nb);
   __libc_lock_unlock (main_arena.mutex);
-  return mem2mem_check (TAG_NEW_USABLE (victim), sz);
+  return mem2mem_check (tag_new_usable (victim), sz);
 }
 
 static void
@@ -262,11 +262,10 @@ free_check (void *mem, const void *caller)
 
   int err = errno;
 
-#ifdef USE_MTAG
   /* Quickly check that the freed pointer matches the tag for the memory.
      This gives a useful double-free detection.  */
-  *(volatile char *)mem;
-#endif
+  if (__glibc_unlikely (mtag_enabled))
+    *(volatile char *)mem;
 
   __libc_lock_lock (main_arena.mutex);
   p = mem2chunk_check (mem, NULL);
@@ -280,8 +279,7 @@ free_check (void *mem, const void *caller)
   else
     {
       /* Mark the chunk as belonging to the library again.  */
-      (void)TAG_REGION (chunk2rawmem (p), CHUNK_AVAILABLE_SIZE (p)
-                                         - CHUNK_HDR_SZ);
+      (void)tag_region (chunk2mem (p), memsize (p));
       _int_free (&main_arena, p, 1);
       __libc_lock_unlock (main_arena.mutex);
     }
@@ -310,11 +308,10 @@ realloc_check (void *oldmem, size_t bytes, const void *caller)
       return NULL;
     }
 
-#ifdef USE_MTAG
   /* Quickly check that the freed pointer matches the tag for the memory.
      This gives a useful double-free detection.  */
-  *(volatile char *)oldmem;
-#endif
+  if (__glibc_unlikely (mtag_enabled))
+    *(volatile char *)oldmem;
 
   __libc_lock_lock (main_arena.mutex);
   const mchunkptr oldp = mem2chunk_check (oldmem, &magic_p);
@@ -333,7 +330,7 @@ realloc_check (void *oldmem, size_t bytes, const void *caller)
 #if HAVE_MREMAP
       mchunkptr newp = mremap_chunk (oldp, chnb);
       if (newp)
-        newmem = chunk2mem (newp);
+        newmem = chunk2mem_tag (newp);
       else
 #endif
       {
@@ -375,7 +372,7 @@ invert:
 
   __libc_lock_unlock (main_arena.mutex);
 
-  return mem2mem_check (TAG_NEW_USABLE (newmem), bytes);
+  return mem2mem_check (tag_new_usable (newmem), bytes);
 }
 
 static void *
@@ -417,7 +414,7 @@ memalign_check (size_t alignment, size_t bytes, const void *caller)
   top_check ();
   mem = _int_memalign (&main_arena, alignment, bytes + 1);
   __libc_lock_unlock (main_arena.mutex);
-  return mem2mem_check (TAG_NEW_USABLE (mem), bytes);
+  return mem2mem_check (tag_new_usable (mem), bytes);
 }
 
 #if SHLIB_COMPAT (libc, GLIBC_2_0, GLIBC_2_25)

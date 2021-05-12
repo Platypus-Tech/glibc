@@ -61,7 +61,7 @@ do_one_test (json_ctx_t *json_ctx, impl_t *impl, CHAR *s,
 static void
 do_test (json_ctx_t *json_ctx, size_t align, int c, size_t len)
 {
-  align &= 63;
+  align &= 4095;
   if ((align + len) * sizeof (CHAR) > page_size)
     return;
 
@@ -97,7 +97,7 @@ test_main (void)
 
   json_attr_object_begin (&json_ctx, "functions");
   json_attr_object_begin (&json_ctx, TEST_NAME);
-  json_attr_string (&json_ctx, "bench-variant", "");
+  json_attr_string (&json_ctx, "bench-variant", "default");
 
   json_array_begin (&json_ctx, "ifuncs");
   FOR_EACH_IMPL (impl, 0)
@@ -110,9 +110,11 @@ test_main (void)
     {
       for (i = 0; i < 18; ++i)
 	do_test (&json_ctx, 0, c, 1 << i);
-      for (i = 1; i < 32; ++i)
+      for (i = 1; i < 64; ++i)
 	{
 	  do_test (&json_ctx, i, c, i);
+	  do_test (&json_ctx, 4096 - i, c, i);
+	  do_test (&json_ctx, 4095, c, i);
 	  if (i & (i - 1))
 	    do_test (&json_ctx, 0, c, i);
 	}

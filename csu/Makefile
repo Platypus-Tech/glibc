@@ -27,10 +27,9 @@ subdir := csu
 include ../Makeconfig
 
 routines = init-first libc-start $(libc-init) sysdep version check_fds \
-	   libc-tls elf-init dso_handle
+	   libc-tls dso_handle
 aux	 = errno
 elide-routines.os = libc-tls
-static-only-routines = elf-init
 csu-dummies = $(filter-out $(start-installed-name),crt1.o Mcrt1.o)
 extra-objs = start.o \
 	     $(start-installed-name) g$(start-installed-name) $(csu-dummies) \
@@ -46,25 +45,20 @@ install-lib = $(start-installed-name) g$(start-installed-name) $(csu-dummies)
 # code is compiled with special flags.
 tests =
 
-CFLAGS-.o += $(no-stack-protector)
-CFLAGS-.op += $(no-stack-protector)
-CFLAGS-.os += $(no-stack-protector)
-
-# Dummy object not actually used for anything.  It is linked into
-# crt1.o nevertheless, which in turn is statically linked into
+# static-reloc.os is a dummy object not actually used for anything.  It is
+# linked into crt1.o nevertheless, which in turn is statically linked into
 # applications, so that build flags matter.
 # See <https://sourceware.org/ml/libc-alpha/2018-07/msg00101.html>.
-# NB: Using $(stack-protector) in this way causes a wrong definition
-# STACK_PROTECTOR_LEVEL due to the preceding $(no-stack-protector),
-# but it does not matter for this source file.
-CFLAGS-static-reloc.os += $(stack-protector)
+#
+# libc-start.os is safe to be built with stack protector since
+# __libc_start_main is called after stack canary setup is done.
+ssp-safe.os = static-reloc libc-start
 
-# This file is not actually part of the startup code in the nonshared
-# case and statically linked into applications.  See
-# <https://sourceware.org/bugzilla/show_bug.cgi?id=23323>,
-# <https://sourceware.org/ml/libc-alpha/2018-06/msg00717.html>.
-# Also see the note above regarding STACK_PROTECTOR_LEVEL.
-CFLAGS-elf-init.oS += $(stack-protector)
+CFLAGS-.o += $(call elide-stack-protector,.o,$(routines))
+CFLAGS-.op += $(call elide-stack-protector,.op,$(routines))
+CFLAGS-.oS += $(call elide-stack-protector,.oS,$(routines))
+CFLAGS-.os += $(call elide-stack-protector,.os,$(filter-out \
+						 $(ssp-safe.os),$(routines)))
 
 ifeq (yes,$(build-shared))
 extra-objs += S$(start-installed-name) gmon-start.os

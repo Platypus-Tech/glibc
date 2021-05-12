@@ -37,6 +37,7 @@
 #define __NR_epoll_create1 486
 #define __NR_epoll_ctl 408
 #define __NR_epoll_pwait 474
+#define __NR_epoll_pwait2 551
 #define __NR_epoll_wait 409
 #define __NR_eventfd 478
 #define __NR_eventfd2 485
@@ -163,6 +164,7 @@
 #define __NR_mlockall 316
 #define __NR_mmap 71
 #define __NR_mount 302
+#define __NR_mount_setattr 552
 #define __NR_move_mount 539
 #define __NR_move_pages 472
 #define __NR_mprotect 74

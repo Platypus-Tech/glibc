@@ -39,7 +39,7 @@ routines :=								      \
 	times								      \
 	wait waitpid wait3 wait4 waitid					      \
 	alarm sleep pause nanosleep					      \
-	fork vfork _exit						      \
+	fork vfork _exit register-atfork				      \
 	execve fexecve execv execle execl execvp execlp execvpe		      \
 	getpid getppid							      \
 	getuid geteuid getgid getegid getgroups setuid setgid group_member    \
@@ -65,7 +65,9 @@ routines :=								      \
 	spawnattr_setsigmask spawnattr_setschedpolicy spawnattr_setschedparam \
 	posix_madvise							      \
 	get_child_max sched_cpucount sched_cpualloc sched_cpufree \
-	streams-compat
+	streams-compat \
+	shm-directory                                                         \
+	execveat
 
 aux		:= init-posix environ
 tests		:= test-errno tstgetopt testfnm runtests runptests \
@@ -83,7 +85,7 @@ tests		:= test-errno tstgetopt testfnm runtests runptests \
 		   tst-nice tst-nanosleep tst-regex2 \
 		   transbug tst-rxspencer tst-pcre tst-boost \
 		   bug-ga1 tst-vfork1 tst-vfork2 tst-vfork3 \
-		   tst-waitid tst-wait4 \
+		   tst-waitid tst-wait4 tst-wait3 \
 		   tst-getaddrinfo2 bug-glob2 bug-glob3 tst-sysconf \
 		   tst-execvp1 tst-execvp2 tst-execlp1 tst-execlp2 \
 		   tst-execv1 tst-execv2 tst-execl1 tst-execl2 \
@@ -102,12 +104,23 @@ tests		:= test-errno tstgetopt testfnm runtests runptests \
 		   tst-sysconf-empty-chroot tst-glob_symlinks tst-fexecve \
 		   tst-glob-tilde test-ssize-max tst-spawn4 bug-regex37 \
 		   bug-regex38 tst-regcomp-truncated tst-spawn-chdir \
-		   tst-wordexp-nocmd
+		   tst-wordexp-nocmd tst-execveat
+
+# Test for the glob symbol version that was replaced in glibc 2.27.
+ifeq ($(have-GLIBC_2.26)$(build-shared),yesyes)
+tests += tst-glob_lstat_compat
+endif
+
+# Test for the posix_spawn, posix_spawnp symbol versions replaced in
+# glibc 2.15.
+ifeq ($(have-GLIBC_2.14)$(build-shared),yesyes)
+tests += tst-spawn4-compat
+endif
+
 tests-internal	:= bug-regex5 bug-regex20 bug-regex33 \
-		   tst-rfc3484 tst-rfc3484-2 tst-rfc3484-3 \
-		   tst-glob_lstat_compat tst-spawn4-compat
+		   tst-rfc3484 tst-rfc3484-2 tst-rfc3484-3
 tests-container := bug-ga2
-xtests		:= tst-getaddrinfo4 tst-getaddrinfo5
+xtests		:= tst-getaddrinfo4 tst-getaddrinfo5 tst-sched_rr_get_interval
 ifeq (yes,$(build-shared))
 test-srcs	:= globtest
 tests           += wordexp-test tst-exec tst-spawn tst-spawn2 tst-spawn3

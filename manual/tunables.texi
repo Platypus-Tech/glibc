@@ -10,7 +10,8 @@ their workload. These are implemented as a set of switches that may be
 modified in different ways. The current default method to do this is via
 the @env{GLIBC_TUNABLES} environment variable by setting it to a string
 of colon-separated @var{name}=@var{value} pairs.  For example, the following
-example enables malloc checking and sets the malloc trim threshold to 128
+example enables @code{malloc} checking and sets the @code{malloc}
+trim threshold to 128
 bytes:
 
 @example
@@ -27,6 +28,44 @@ distributions to choose their preferred method at build time.
 Finally, the set of tunables available may vary between distributions as
 the tunables feature allows distributions to add their own tunables under
 their own namespace.
+
+Passing @option{--list-tunables} to the dynamic loader to print all
+tunables with minimum and maximum values:
+
+@example
+$ /lib64/ld-linux-x86-64.so.2 --list-tunables
+glibc.rtld.nns: 0x4 (min: 0x1, max: 0x10)
+glibc.elision.skip_lock_after_retries: 3 (min: -2147483648, max: 2147483647)
+glibc.malloc.trim_threshold: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.malloc.perturb: 0 (min: 0, max: 255)
+glibc.cpu.x86_shared_cache_size: 0x100000 (min: 0x0, max: 0xffffffffffffffff)
+glibc.mem.tagging: 0 (min: 0, max: 255)
+glibc.elision.tries: 3 (min: -2147483648, max: 2147483647)
+glibc.elision.enable: 0 (min: 0, max: 1)
+glibc.cpu.x86_rep_movsb_threshold: 0x1000 (min: 0x100, max: 0xffffffffffffffff)
+glibc.malloc.mxfast: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.elision.skip_lock_busy: 3 (min: -2147483648, max: 2147483647)
+glibc.malloc.top_pad: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.cpu.x86_rep_stosb_threshold: 0x800 (min: 0x1, max: 0xffffffffffffffff)
+glibc.cpu.x86_non_temporal_threshold: 0xc0000 (min: 0x0, max: 0xffffffffffffffff)
+glibc.cpu.x86_shstk:
+glibc.cpu.hwcap_mask: 0x6 (min: 0x0, max: 0xffffffffffffffff)
+glibc.malloc.mmap_max: 0 (min: -2147483648, max: 2147483647)
+glibc.elision.skip_trylock_internal_abort: 3 (min: -2147483648, max: 2147483647)
+glibc.malloc.tcache_unsorted_limit: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.cpu.x86_ibt:
+glibc.cpu.hwcaps:
+glibc.elision.skip_lock_internal_abort: 3 (min: -2147483648, max: 2147483647)
+glibc.malloc.arena_max: 0x0 (min: 0x1, max: 0xffffffffffffffff)
+glibc.malloc.mmap_threshold: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.cpu.x86_data_cache_size: 0x8000 (min: 0x0, max: 0xffffffffffffffff)
+glibc.malloc.tcache_count: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.malloc.arena_test: 0x0 (min: 0x1, max: 0xffffffffffffffff)
+glibc.pthread.mutex_spin_count: 100 (min: 0, max: 32767)
+glibc.rtld.optional_static_tls: 0x200 (min: 0x0, max: 0xffffffffffffffff)
+glibc.malloc.tcache_max: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.malloc.check: 0 (min: 0, max: 3)
+@end example
 
 @menu
 * Tunable names::  The structure of a tunable name
@@ -77,7 +116,7 @@ This tunable supersedes the @env{MALLOC_CHECK_} environment variable and is
 identical in features.
 
 Setting this tunable to a non-zero value enables a special (less
-efficient) memory allocator for the malloc family of functions that is
+efficient) memory allocator for the @code{malloc} family of functions that is
 designed to be tolerant against simple errors such as double calls of
 free with the same argument, or overruns of a single byte (off-by-one
 bugs). Not all such errors can be protected against, however, and memory
@@ -111,7 +150,7 @@ identical in features.
 
 If set to a non-zero value, memory blocks are initialized with values depending
 on some low order bits of this tunable when they are allocated (except when
-allocated by calloc) and freed.  This can be used to debug the use of
+allocated by @code{calloc}) and freed.  This can be used to debug the use of
 uninitialized or freed heap memory. Note that this option does not guarantee
 that the freed block will have any specific values. It only guarantees that the
 content the block had before it was freed will be overwritten.
@@ -218,13 +257,13 @@ is no limit.
 @end deftp
 
 @deftp Tunable glibc.malloc.mxfast
-One of the optimizations malloc uses is to maintain a series of ``fast
+One of the optimizations @code{malloc} uses is to maintain a series of ``fast
 bins'' that hold chunks up to a specific size.  The default and
 maximum size which may be held this way is 80 bytes on 32-bit systems
 or 160 bytes on 64-bit systems.  Applications which value size over
 speed may choose to reduce the size of requests which are serviced
 from fast bins with this tunable.  Note that the value specified
-includes malloc's internal overhead, which is normally the size of one
+includes @code{malloc}'s internal overhead, which is normally the size of one
 pointer, so add 4 on 32-bit systems or 8 on 64-bit systems to the size
 passed to @code{malloc} for the largest bin size to enable.
 @end deftp
@@ -505,7 +544,8 @@ all other systems.
 This tunable takes a value between 0 and 255 and acts as a bitmask
 that enables various capabilities.
 
-Bit 0 (the least significant bit) causes the malloc subsystem to allocate
+Bit 0 (the least significant bit) causes the @code{malloc}
+subsystem to allocate
 tagged memory, with each allocation being assigned a random tag.
 
 Bit 1 enables precise faulting mode for tag violations on systems that

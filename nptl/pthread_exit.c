@@ -18,17 +18,29 @@
 
 #include <stdlib.h>
 #include "pthreadP.h"
-
+#include <unwind-link.h>
+#include <stdio.h>
+#include <gnu/lib-names.h>
 
 void
 __pthread_exit (void *value)
 {
+  {
+    struct unwind_link *unwind_link = __libc_unwind_link_get ();
+    if (unwind_link == NULL)
+      __libc_fatal (LIBGCC_S_SO
+                    " must be installed for pthread_exit to work\n");
+  }
+
   THREAD_SETMEM (THREAD_SELF, result, value);
 
   __do_cancel ();
 }
+libc_hidden_def (__pthread_exit)
 weak_alias (__pthread_exit, pthread_exit)
 
-/* After a thread terminates, __libc_start_main decrements
-   __nptl_nthreads defined in pthread_create.c.  */
-PTHREAD_STATIC_FN_REQUIRE (__pthread_create)
+/* Ensure that the unwinder is always linked in (the __pthread_unwind
+   reference from __do_cancel is weak).  Use ___pthread_unwind_next
+   (three underscores) to produce a strong reference to the same
+   file.  */
+PTHREAD_STATIC_FN_REQUIRE (___pthread_unwind_next)

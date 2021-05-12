@@ -68,7 +68,13 @@ tests		:= test-utime test-stat test-stat2 test-lfs tst-getcwd \
 		   tst-fts tst-fts-lfs tst-open-tmpfile \
 		   tst-copy_file_range tst-getcwd-abspath tst-lockf \
 		   tst-ftw-lnk tst-file_change_detection tst-lchmod \
-		   tst-ftw-bz26353
+		   tst-ftw-bz26353 tst-stat tst-stat-lfs \
+		   tst-utime \
+		   tst-utimes \
+		   tst-futimes \
+		   tst-lutimes \
+		   tst-futimens \
+		   tst-utimensat \
 
 # Likewise for statx, but we do not need static linking here.
 tests-internal += tst-statx
@@ -102,8 +108,9 @@ CFLAGS-posix_fallocate.c += -fexceptions
 CFLAGS-posix_fallocate64.c += -fexceptions
 CFLAGS-fallocate.c += -fexceptions
 CFLAGS-fallocate64.c += -fexceptions
-CFLAGS-read.c += -fexceptions
-CFLAGS-write.c += -fexceptions
+CFLAGS-read.c += -fexceptions -fasynchronous-unwind-tables
+CFLAGS-write.c += -fexceptions -fasynchronous-unwind-tables
+CFLAGS-close.c += -fexceptions -fasynchronous-unwind-tables
 
 CFLAGS-test-stat.c += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 CFLAGS-test-lfs.c += -D_LARGEFILE64_SOURCE

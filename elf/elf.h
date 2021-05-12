@@ -336,7 +336,8 @@ typedef struct
 #define EM_BA2		202	/* Beyond BA2 */
 #define EM_XCORE	203	/* XMOS xCORE */
 #define EM_MCHP_PIC	204	/* Microchip 8-bit PIC(r) */
-				/* reserved 205-209 */
+#define EM_INTELGT	205	/* Intel Graphics Technology */
+				/* reserved 206-209 */
 #define EM_KM32		210	/* KM211 KM32 */
 #define EM_KMX32	211	/* KM211 KMX32 */
 #define EM_EMX16	212	/* KM211 KMX16 */
@@ -813,6 +814,8 @@ typedef struct
 					   address keys.  */
 #define NT_ARM_PACG_KEYS	0x408	/* ARM pointer authentication
 					   generic key.  */
+#define NT_ARM_TAGGED_ADDR_CTRL	0x409	/* AArch64 tagged address
+					   control.  */
 #define NT_VMCOREDD	0x700		/* Vmcore Device Dump Note.  */
 #define NT_MIPS_DSP	0x800		/* MIPS DSP ASE registers.  */
 #define NT_MIPS_FP_MODE	0x801		/* MIPS floating-point mode.  */
@@ -1324,31 +1327,26 @@ typedef struct
 
 /* The x86 instruction sets indicated by the corresponding bits are
    used in program.  Their support in the hardware is optional.  */
-#define GNU_PROPERTY_X86_ISA_1_USED		0xc0000000
+#define GNU_PROPERTY_X86_ISA_1_USED		0xc0010002
 /* The x86 instruction sets indicated by the corresponding bits are
    used in program and they must be supported by the hardware.   */
-#define GNU_PROPERTY_X86_ISA_1_NEEDED		0xc0000001
+#define GNU_PROPERTY_X86_ISA_1_NEEDED		0xc0008002
 /* X86 processor-specific features used in program.  */
 #define GNU_PROPERTY_X86_FEATURE_1_AND		0xc0000002
 
-#define GNU_PROPERTY_X86_ISA_1_486		(1U << 0)
-#define GNU_PROPERTY_X86_ISA_1_586		(1U << 1)
-#define GNU_PROPERTY_X86_ISA_1_686		(1U << 2)
-#define GNU_PROPERTY_X86_ISA_1_SSE		(1U << 3)
-#define GNU_PROPERTY_X86_ISA_1_SSE2		(1U << 4)
-#define GNU_PROPERTY_X86_ISA_1_SSE3		(1U << 5)
-#define GNU_PROPERTY_X86_ISA_1_SSSE3		(1U << 6)
-#define GNU_PROPERTY_X86_ISA_1_SSE4_1		(1U << 7)
-#define GNU_PROPERTY_X86_ISA_1_SSE4_2		(1U << 8)
-#define GNU_PROPERTY_X86_ISA_1_AVX		(1U << 9)
-#define GNU_PROPERTY_X86_ISA_1_AVX2		(1U << 10)
-#define GNU_PROPERTY_X86_ISA_1_AVX512F		(1U << 11)
-#define GNU_PROPERTY_X86_ISA_1_AVX512CD		(1U << 12)
-#define GNU_PROPERTY_X86_ISA_1_AVX512ER		(1U << 13)
-#define GNU_PROPERTY_X86_ISA_1_AVX512PF		(1U << 14)
-#define GNU_PROPERTY_X86_ISA_1_AVX512VL		(1U << 15)
-#define GNU_PROPERTY_X86_ISA_1_AVX512DQ		(1U << 16)
-#define GNU_PROPERTY_X86_ISA_1_AVX512BW		(1U << 17)
+/* GNU_PROPERTY_X86_ISA_1_BASELINE: CMOV, CX8 (cmpxchg8b), FPU (fld),
+   MMX, OSFXSR (fxsave), SCE (syscall), SSE and SSE2.  */
+#define GNU_PROPERTY_X86_ISA_1_BASELINE		(1U << 0)
+/* GNU_PROPERTY_X86_ISA_1_V2: GNU_PROPERTY_X86_ISA_1_BASELINE,
+   CMPXCHG16B (cmpxchg16b), LAHF-SAHF (lahf), POPCNT (popcnt), SSE3,
+   SSSE3, SSE4.1 and SSE4.2.  */
+#define GNU_PROPERTY_X86_ISA_1_V2		(1U << 1)
+/* GNU_PROPERTY_X86_ISA_1_V3: GNU_PROPERTY_X86_ISA_1_V2, AVX, AVX2, BMI1,
+   BMI2, F16C, FMA, LZCNT, MOVBE, XSAVE.  */
+#define GNU_PROPERTY_X86_ISA_1_V3		(1U << 2)
+/* GNU_PROPERTY_X86_ISA_1_V4: GNU_PROPERTY_X86_ISA_1_V3, AVX512F,
+   AVX512BW, AVX512CD, AVX512DQ and AVX512VL.  */
+#define GNU_PROPERTY_X86_ISA_1_V4		(1U << 3)
 
 /* This indicates that all executable sections are compatible with
    IBT.  */

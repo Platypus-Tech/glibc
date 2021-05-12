@@ -23,6 +23,9 @@
 #include <atomic.h>
 #include <sysdep.h>
 #include <unistd.h>
+#include <unwind-link.h>
+#include <stdio.h>
+#include <gnu/lib-names.h>
 
 int
 __pthread_cancel (pthread_t th)
@@ -35,7 +38,13 @@ __pthread_cancel (pthread_t th)
     return ESRCH;
 
 #ifdef SHARED
-  pthread_cancel_init ();
+  /* Trigger an error if libgcc_s cannot be loaded.  */
+  {
+    struct unwind_link *unwind_link = __libc_unwind_link_get ();
+    if (unwind_link == NULL)
+      __libc_fatal (LIBGCC_S_SO
+		    " must be installed for pthread_cancel to work\n");
+  }
 #endif
   int result = 0;
   int oldval;
@@ -81,7 +90,7 @@ __pthread_cancel (pthread_t th)
 	   points get executed.  */
 	THREAD_SETMEM (THREAD_SELF, header.multiple_threads, 1);
 #ifndef TLS_MULTIPLE_THREADS_IN_TCB
-	__pthread_multiple_threads = *__libc_multiple_threads_ptr = 1;
+	__libc_multiple_threads = 1;
 #endif
     }
   /* Mark the thread as canceled.  This has to be done
@@ -91,6 +100,10 @@ __pthread_cancel (pthread_t th)
 
   return result;
 }
-weak_alias (__pthread_cancel, pthread_cancel)
+versioned_symbol (libc, __pthread_cancel, pthread_cancel, GLIBC_2_34);
+
+#if OTHER_SHLIB_COMPAT (libpthread, GLIBC_2_0, GLIBC_2_34)
+compat_symbol (libpthread, __pthread_cancel, pthread_cancel, GLIBC_2_0);
+#endif
 
 PTHREAD_STATIC_FN_REQUIRE (__pthread_create)

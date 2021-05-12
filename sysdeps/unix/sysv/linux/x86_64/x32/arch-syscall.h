@@ -37,6 +37,7 @@
 #define __NR_epoll_create1 1073742115
 #define __NR_epoll_ctl 1073742057
 #define __NR_epoll_pwait 1073742105
+#define __NR_epoll_pwait2 1073742265
 #define __NR_epoll_wait 1073742056
 #define __NR_eventfd 1073742108
 #define __NR_eventfd2 1073742114
@@ -156,6 +157,7 @@
 #define __NR_mmap 1073741833
 #define __NR_modify_ldt 1073741978
 #define __NR_mount 1073741989
+#define __NR_mount_setattr 1073742266
 #define __NR_move_mount 1073742253
 #define __NR_move_pages 1073742357
 #define __NR_mprotect 1073741834

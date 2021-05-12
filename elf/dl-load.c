@@ -438,7 +438,23 @@ add_name_to_object (struct link_map *l, const char *name)
   newname->name = memcpy (newname + 1, name, name_len);
   newname->next = NULL;
   newname->dont_free = 0;
-  lastp->next = newname;
+  /* CONCURRENCY NOTES:
+
+     Make sure the initialization of newname happens before its address is
+     read from the lastp->next store below.
+
+     GL(dl_load_lock) is held here (and by other writers, e.g. dlclose), so
+     readers of libname_list->next (e.g. _dl_check_caller or the reads above)
+     can use that for synchronization, however the read in _dl_name_match_p
+     may be executed without holding the lock during _dl_runtime_resolve
+     (i.e. lazy symbol resolution when a function of library l is called).
+
+     The release MO store below synchronizes with the acquire MO load in
+     _dl_name_match_p.  Other writes need to synchronize with that load too,
+     however those happen either early when the process is single threaded
+     (dl_main) or when the library is unloaded (dlclose) and the user has to
+     synchronize library calls with unloading.  */
+  atomic_store_release (&lastp->next, newname);
 }
 
 /* Standard search directories.  */
@@ -758,50 +774,51 @@ _dl_init_paths (const char *llp, const char *source,
   max_dirnamelen = SYSTEM_DIRS_MAX_LEN;
   *aelem = NULL;
 
-#ifdef SHARED
-  /* This points to the map of the main object.  */
+  /* This points to the map of the main object.  If there is no main
+     object (e.g., under --help, use the dynamic loader itself as a
+     stand-in.  */
   l = GL(dl_ns)[LM_ID_BASE]._ns_loaded;
-  if (l != NULL)
-    {
-      assert (l->l_type != lt_loaded);
+#ifdef SHARED
+  if (l == NULL)
+    l = &GL (dl_rtld_map);
+#endif
+  assert (l->l_type != lt_loaded);
 
-      if (l->l_info[DT_RUNPATH])
+  if (l->l_info[DT_RUNPATH])
+    {
+      /* Allocate room for the search path and fill in information
+	 from RUNPATH.  */
+      decompose_rpath (&l->l_runpath_dirs,
+		       (const void *) (D_PTR (l, l_info[DT_STRTAB])
+				       + l->l_info[DT_RUNPATH]->d_un.d_val),
+		       l, "RUNPATH");
+      /* During rtld init the memory is allocated by the stub malloc,
+	 prevent any attempt to free it by the normal malloc.  */
+      l->l_runpath_dirs.malloced = 0;
+
+      /* The RPATH is ignored.  */
+      l->l_rpath_dirs.dirs = (void *) -1;
+    }
+  else
+    {
+      l->l_runpath_dirs.dirs = (void *) -1;
+
+      if (l->l_info[DT_RPATH])
 	{
 	  /* Allocate room for the search path and fill in information
-	     from RUNPATH.  */
-	  decompose_rpath (&l->l_runpath_dirs,
+	     from RPATH.  */
+	  decompose_rpath (&l->l_rpath_dirs,
 			   (const void *) (D_PTR (l, l_info[DT_STRTAB])
-					   + l->l_info[DT_RUNPATH]->d_un.d_val),
-			   l, "RUNPATH");
-	  /* During rtld init the memory is allocated by the stub malloc,
-	     prevent any attempt to free it by the normal malloc.  */
-	  l->l_runpath_dirs.malloced = 0;
-
-	  /* The RPATH is ignored.  */
-	  l->l_rpath_dirs.dirs = (void *) -1;
+					   + l->l_info[DT_RPATH]->d_un.d_val),
+			   l, "RPATH");
+	  /* During rtld init the memory is allocated by the stub
+	     malloc, prevent any attempt to free it by the normal
+	     malloc.  */
+	  l->l_rpath_dirs.malloced = 0;
 	}
       else
-	{
-	  l->l_runpath_dirs.dirs = (void *) -1;
-
-	  if (l->l_info[DT_RPATH])
-	    {
-	      /* Allocate room for the search path and fill in information
-		 from RPATH.  */
-	      decompose_rpath (&l->l_rpath_dirs,
-			       (const void *) (D_PTR (l, l_info[DT_STRTAB])
-					       + l->l_info[DT_RPATH]->d_un.d_val),
-			       l, "RPATH");
-	      /* During rtld init the memory is allocated by the stub
-		 malloc, prevent any attempt to free it by the normal
-		 malloc.  */
-	      l->l_rpath_dirs.malloced = 0;
-	    }
-	  else
-	    l->l_rpath_dirs.dirs = (void *) -1;
-	}
+	l->l_rpath_dirs.dirs = (void *) -1;
     }
-#endif	/* SHARED */
 
   if (llp != NULL && *llp != '\0')
     {
@@ -1351,7 +1368,11 @@ _dl_map_object_from_fd (const char *name, const char *origname, int fd,
       check_consistency ();
 #endif
 
+#if PTHREAD_IN_LIBC
+      errval = _dl_make_stacks_executable (stack_endp);
+#else
       errval = (*GL(dl_make_stack_executable_hook)) (stack_endp);
+#endif
       if (errval)
 	{
 	  errstring = N_("\

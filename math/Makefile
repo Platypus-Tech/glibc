@@ -126,8 +126,7 @@ type-ldouble-yes := ldouble
 
 # double support
 type-double-suffix :=
-type-double-routines := branred doasin dosincos mpa mpatan2	\
-		       k_rem_pio2 mpatan mpsqrt mptan sincos32	\
+type-double-routines := branred k_rem_pio2 	\
 		       sincostab math_err e_exp_data e_log_data	\
 		       e_log2_data e_pow_log_data
 
@@ -196,6 +195,9 @@ calls = s_isinfF s_isnanF s_finiteF s_copysignF s_modfF s_scalbnF s_frexpF \
 gen-calls = s_ldexpF
 generated += $(foreach s,.c .S,$(call type-foreach, $(calls:s_%=m_%$(s))))
 routines = $(call type-foreach, $(calls))
+# The $(calls) that are shared between libm and libc are not included in static
+# libm so the symbols end up in exactly one place.
+libm-shared-only-routines = $(call type-foreach, $(calls:s_%=m_%))
 
 ifeq ($(build-mathvec),yes)
 # We need to install libm.so and libm.a as linker scripts
@@ -249,7 +251,11 @@ tests-static = test-fpucw-static test-fpucw-ieee-static \
 	       test-signgam-uchar-static test-signgam-uchar-init-static \
 	       test-signgam-uint-static test-signgam-uint-init-static \
 	       test-signgam-ullong-static test-signgam-ullong-init-static
-tests-internal = test-matherr test-matherr-2
+
+# The tested symbols matherr, _LIB_VERSION have been removed in glibc 2.27.
+ifeq ($(have-GLIBC_2.26)$(build-shared),yesyes)
+tests += test-matherr test-matherr-2
+endif
 
 # These tests use internal (unexported) GMP functions and are linked
 # statically to obtain access to these functions.
@@ -325,8 +331,7 @@ libm-tests-for-type = $(foreach f,$(libm-test-funcs-all),\
 
 libm-tests.o = $(addsuffix .o,$(libm-tests))
 
-tests += $(filter-out $(libm-tests-compat),$(libm-tests))
-tests-internal += $(libm-tests-compat)
+tests += $(libm-tests)
 generated += $(addsuffix .c,$(libm-tests)) \
 	     $(foreach t,$(test-types),libm-test-support-$(t).c)
 

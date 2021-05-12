@@ -207,7 +207,7 @@ __malloc_fork_unlock_child (void)
 }
 
 #if HAVE_TUNABLES
-void
+static void
 TUNABLE_CALLBACK (set_mallopt_check) (tunable_val_t *valp)
 {
   int32_t value = (int32_t) valp->numval;
@@ -217,7 +217,7 @@ TUNABLE_CALLBACK (set_mallopt_check) (tunable_val_t *valp)
 
 # define TUNABLE_CALLBACK_FNDECL(__name, __type) \
 static inline int do_ ## __name (__type value);				      \
-void									      \
+static void									      \
 TUNABLE_CALLBACK (__name) (tunable_val_t *valp)				      \
 {									      \
   __type value = (__type) (valp)->numval;				      \
@@ -287,39 +287,6 @@ extern struct dl_open_hook *_dl_open_hook;
 libc_hidden_proto (_dl_open_hook);
 #endif
 
-#ifdef USE_MTAG
-
-/* Generate a new (random) tag value for PTR and tag the memory it
-   points to upto the end of the usable size for the chunk containing
-   it.  Return the newly tagged pointer.  */
-static void *
-__mtag_tag_new_usable (void *ptr)
-{
-  if (ptr)
-    {
-      mchunkptr cp = mem2chunk(ptr);
-      /* This likely will never happen, but we can't handle retagging
-	 chunks from the dumped main arena.  So just return the
-	 existing pointer.  */
-      if (DUMPED_MAIN_ARENA_CHUNK (cp))
-	return ptr;
-      ptr = __libc_mtag_tag_region (__libc_mtag_new_tag (ptr),
-				    CHUNK_AVAILABLE_SIZE (cp) - CHUNK_HDR_SZ);
-    }
-  return ptr;
-}
-
-/* Generate a new (random) tag value for PTR, set the tags for the
-   memory to the new tag and initialize the memory contents to VAL.
-   In practice this function will only be called with VAL=0, but we
-   keep this parameter to maintain the same prototype as memset.  */
-static void *
-__mtag_tag_new_memset (void *ptr, int val, size_t size)
-{
-  return __libc_mtag_memset_with_tag (__libc_mtag_new_tag (ptr), val, size);
-}
-#endif
-
 static void
 ptmalloc_init (void)
 {
@@ -337,12 +304,8 @@ ptmalloc_init (void)
       if (__MTAG_SBRK_UNTAGGED)
 	__morecore = __failing_morecore;
 
-      __mtag_mmap_flags = __MTAG_MMAP_FLAGS;
-      __tag_new_memset = __mtag_tag_new_memset;
-      __tag_region = __libc_mtag_tag_region;
-      __tag_new_usable = __mtag_tag_new_usable;
-      __tag_at = __libc_mtag_address_get_tag;
-      __mtag_granule_mask = ~(size_t)(__MTAG_GRANULE_SIZE - 1);
+      mtag_enabled = true;
+      mtag_mmap_flags = __MTAG_MMAP_FLAGS;
     }
 #endif
 
@@ -562,7 +525,7 @@ new_heap (size_t size, size_t top_pad)
             }
         }
     }
-  if (__mprotect (p2, size, MTAG_MMAP_FLAGS | PROT_READ | PROT_WRITE) != 0)
+  if (__mprotect (p2, size, mtag_mmap_flags | PROT_READ | PROT_WRITE) != 0)
     {
       __munmap (p2, HEAP_MAX_SIZE);
       return 0;
@@ -592,7 +555,7 @@ grow_heap (heap_info *h, long diff)
     {
       if (__mprotect ((char *) h + h->mprotect_size,
                       (unsigned long) new_size - h->mprotect_size,
-                      MTAG_MMAP_FLAGS | PROT_READ | PROT_WRITE) != 0)
+                      mtag_mmap_flags | PROT_READ | PROT_WRITE) != 0)
         return -2;
 
       h->mprotect_size = new_size;

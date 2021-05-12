@@ -21,14 +21,19 @@
 subdir := benchtests
 
 include ../Makeconfig
-bench-math := acos acosh asin asinh atan atanh cos cosh exp exp2 log log2 \
-	      modf pow rint sin sincos sinh sqrt tan tanh fmin fmax fminf \
-	      fmaxf powf trunc truncf roundeven roundevenf expf exp2f logf \
+bench-math := acos acosh asin asinh atan atanh cos cosh exp exp2 log log2   \
+	      modf pow rint sin sincos sinh sqrt tan tanh fmin fmax fminf   \
+	      fmaxf powf trunc truncf roundeven roundevenf expf exp2f logf  \
 	      log2f sincosf sinf cosf isnan isinf isfinite hypot logb logbf \
-	      exp10f
+	      exp10f ilogb ilogbf cbrt erf erfc exp10 expm1 j0 j1 lgamma    \
+	      log10 log1p tgamma y0 y1 atan2
+
+ifneq (,$(filter yes,$(float96-fcts)))
+bench-math += cbrtl
+endif
 
 ifneq (,$(filter yes,$(float128-fcts) $(float128-alias-fcts)))
-bench-math += expf128 powf128 sinf128
+bench-math += expf128 powf128 sinf128 ilogbf128
 endif
 
 bench-pthread := pthread_once thread_create pthread-locks
@@ -156,13 +161,6 @@ ifdef DETAILED
 DETAILED_OPT := -d
 endif
 
-# This makes sure CPPFLAGS-nonlib and CFLAGS-nonlib are passed
-# for all these modules.
-cpp-srcs-left := $(binaries-benchset:=.c) $(binaries-bench:=.c) \
-		 $(binaries-bench-malloc:=.c)
-lib := nonlib
-include $(patsubst %,$(..)libof-iterator.mk,$(cpp-srcs-left))
-
 bench-deps := bench-skeleton.c bench-timing.h Makefile
 
 run-bench = $(test-wrapper-env) \
@@ -170,6 +168,13 @@ run-bench = $(test-wrapper-env) \
 	    $($*-ENV) $(test-via-rtld-prefix) $${run}
 
 timing-type := $(objpfx)bench-timing-type
+
+# This makes sure CPPFLAGS-nonlib and CFLAGS-nonlib are passed
+# for all these modules.
+cpp-srcs-left := $(binaries-benchset:=.c) $(binaries-bench:=.c) \
+		 $(binaries-bench-malloc:=.c) $(timing-type:=.c)
+lib := nonlib
+include $(patsubst %,$(..)libof-iterator.mk,$(cpp-srcs-left))
 
 bench-clean:
 	rm -f $(binaries-bench) $(addsuffix .o,$(binaries-bench))

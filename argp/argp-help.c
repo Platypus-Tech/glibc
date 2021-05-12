@@ -87,6 +87,8 @@ char *strerror (int errnum);
 # define SIZE_MAX ((size_t) -1)
 #endif
 
+/* ========================================================================== */
+
 /* User-selectable (using an environment variable) formatting parameters.
 
    These may be specified in an environment variable called `ARGP_HELP_FMT',
@@ -166,7 +168,7 @@ fill_in_uparams (const struct argp_state *state)
 {
   const char *var = getenv ("ARGP_HELP_FMT");
 
-#define SKIPWS(p) do { while (isspace (*p)) p++; } while (0);
+#define SKIPWS(p) do { while (isspace ((unsigned char) *p)) p++; } while (0);
 
   if (var)
     /* Parse var. */
@@ -174,14 +176,14 @@ fill_in_uparams (const struct argp_state *state)
       {
 	SKIPWS (var);
 
-	if (isalpha (*var))
+	if (isalpha ((unsigned char) *var))
 	  {
 	    size_t var_len;
 	    const struct uparam_name *un;
 	    int unspec = 0, val = 0;
 	    const char *arg = var;
 
-	    while (isalnum (*arg) || *arg == '-' || *arg == '_')
+	    while (isalnum ((unsigned char) *arg) || *arg == '-' || *arg == '_')
 	      arg++;
 	    var_len = arg - var;
 
@@ -206,10 +208,10 @@ fill_in_uparams (const struct argp_state *state)
 		else
 		  val = 1;
 	      }
-	    else if (isdigit (*arg))
+	    else if (isdigit ((unsigned char) *arg))
 	      {
 		val = atoi (arg);
-		while (isdigit (*arg))
+		while (isdigit ((unsigned char) *arg))
 		  arg++;
 		SKIPWS (arg);
 	      }
@@ -253,6 +255,8 @@ fill_in_uparams (const struct argp_state *state)
       }
 }
 
+/* ========================================================================== */
+
 /* Returns true if OPT hasn't been marked invisible.  Visibility only affects
    whether OPT is displayed or used in sorting, not option shadowing.  */
 #define ovisible(opt) (! ((opt)->flags & OPTION_HIDDEN))
@@ -345,6 +349,9 @@ find_char (char ch, char *beg, char *end)
   return 0;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Data structure: HOL = Help Option List                                     */
+
 struct hol_cluster;		/* fwd decl */
 
 struct hol_entry
@@ -363,11 +370,11 @@ struct hol_entry
   char *short_options;
 
   /* Entries are sorted by their group first, in the order:
-       1, 2, ..., n, 0, -m, ..., -2, -1
+       0, 1, 2, ..., n, -m, ..., -2, -1
      and then alphabetically within each group.  The default is 0.  */
   int group;
 
-  /* The cluster of options this entry belongs to, or 0 if none.  */
+  /* The cluster of options this entry belongs to, or NULL if none.  */
   struct hol_cluster *cluster;
 
   /* The argp from which this option came.  */
@@ -389,7 +396,7 @@ struct hol_cluster
      same depth (clusters always follow options in the same group).  */
   int group;
 
-  /* The cluster to which this cluster belongs, or 0 if it's at the base
+  /* The cluster to which this cluster belongs, or NULL if it's at the base
      level.  */
   struct hol_cluster *parent;
 
@@ -422,7 +429,7 @@ struct hol
 };
 
 /* Create a struct hol from the options in ARGP.  CLUSTER is the
-   hol_cluster in which these entries occur, or 0, if at the root.  */
+   hol_cluster in which these entries occur, or NULL if at the root.  */
 static struct hol *
 make_hol (const struct argp *argp, struct hol_cluster *cluster)
 {
@@ -540,6 +547,9 @@ hol_free (struct hol *hol)
   free (hol);
 }
 
+/* Iterate across the short_options of the given ENTRY.  Call FUNC for each.
+   Stop when such a call returns a non-zero value, and return this value.
+   If all FUNC invocations returned 0, return 0.  */
 static int
 hol_entry_short_iterate (const struct hol_entry *entry,
 			 int (*func)(const struct argp_option *opt,
@@ -565,6 +575,9 @@ hol_entry_short_iterate (const struct hol_entry *entry,
   return val;
 }
 
+/* Iterate across the long options of the given ENTRY.  Call FUNC for each.
+   Stop when such a call returns a non-zero value, and return this value.
+   If all FUNC invocations returned 0, return 0.  */
 static inline int
 __attribute__ ((always_inline))
 hol_entry_long_iterate (const struct hol_entry *entry,
@@ -589,7 +602,7 @@ hol_entry_long_iterate (const struct hol_entry *entry,
   return val;
 }
 
-/* Iterator that returns true for the first short option.  */
+/* A filter that returns true for the first short option of a given ENTRY.  */
 static inline int
 until_short (const struct argp_option *opt, const struct argp_option *real,
 	     const char *domain, void *cookie)
@@ -605,7 +618,7 @@ hol_entry_first_short (const struct hol_entry *entry)
 				  entry->argp->argp_domain, 0);
 }
 
-/* Returns the first valid long option in ENTRY, or 0 if there is none.  */
+/* Returns the first valid long option in ENTRY, or NULL if there is none.  */
 static const char *
 hol_entry_first_long (const struct hol_entry *entry)
 {
@@ -617,7 +630,7 @@ hol_entry_first_long (const struct hol_entry *entry)
   return 0;
 }
 
-/* Returns the entry in HOL with the long option name NAME, or 0 if there is
+/* Returns the entry in HOL with the long option name NAME, or NULL if there is
    none.  */
 static struct hol_entry *
 hol_find_entry (struct hol *hol, const char *name)
@@ -652,37 +665,93 @@ hol_set_group (struct hol *hol, const char *name, int group)
     entry->group = group;
 }
 
-/* Order by group:  0, 1, 2, ..., n, -m, ..., -2, -1.
-   EQ is what to return if GROUP1 and GROUP2 are the same.  */
+/* -------------------------------------------------------------------------- */
+/* Sorting the entries in a HOL.                                              */
+
+/* Order by group:  0, 1, 2, ..., n, -m, ..., -2, -1.  */
 static int
-group_cmp (int group1, int group2, int eq)
+group_cmp (int group1, int group2)
 {
-  if (group1 == group2)
-    return eq;
-  else if ((group1 < 0 && group2 < 0) || (group1 >= 0 && group2 >= 0))
+  if ((group1 < 0 && group2 < 0) || (group1 >= 0 && group2 >= 0))
     return group1 - group2;
   else
+    /* Return > 0 if group1 < 0 <= group2.
+       Return < 0 if group2 < 0 <= group1.  */
     return group2 - group1;
 }
 
-/* Compare clusters CL1 & CL2 by the order that they should appear in
+/* Compare clusters CL1 and CL2 by the order that they should appear in
+   output.  Assume CL1 and CL2 have the same parent.  */
+static int
+hol_sibling_cluster_cmp (const struct hol_cluster *cl1,
+			 const struct hol_cluster *cl2)
+{
+  /* Compare by group first.  */
+  int cmp = group_cmp (cl1->group, cl2->group);
+  if (cmp != 0)
+    return cmp;
+
+  /* Within a group, compare by index within the group.  */
+  return cl2->index - cl1->index;
+}
+
+/* Compare clusters CL1 and CL2 by the order that they should appear in
+   output.  Assume CL1 and CL2 are at the same depth.  */
+static int
+hol_cousin_cluster_cmp (const struct hol_cluster *cl1,
+			const struct hol_cluster *cl2)
+{
+  if (cl1->parent == cl2->parent)
+    return hol_sibling_cluster_cmp (cl1, cl2);
+  else
+    {
+      /* Compare the parent clusters first.  */
+      int cmp = hol_cousin_cluster_cmp (cl1->parent, cl2->parent);
+      if (cmp != 0)
+	return cmp;
+
+      /* Next, compare by group.  */
+      cmp = group_cmp (cl1->group, cl2->group);
+      if (cmp != 0)
+	return cmp;
+
+      /* Next, within a group, compare by index within the group.  */
+      return cl2->index - cl1->index;
+    }
+}
+
+/* Compare clusters CL1 and CL2 by the order that they should appear in
    output.  */
 static int
 hol_cluster_cmp (const struct hol_cluster *cl1, const struct hol_cluster *cl2)
 {
   /* If one cluster is deeper than the other, use its ancestor at the same
-     level, so that finding the common ancestor is straightforward.  */
-  while (cl1->depth > cl2->depth)
-    cl1 = cl1->parent;
-  while (cl2->depth > cl1->depth)
-    cl2 = cl2->parent;
+     level.  Then, go by the rule that entries that are not in a sub-cluster
+     come before entries in a sub-cluster.  */
+  if (cl1->depth > cl2->depth)
+    {
+      do
+	cl1 = cl1->parent;
+      while (cl1->depth > cl2->depth);
+      int cmp = hol_cousin_cluster_cmp (cl1, cl2);
+      if (cmp != 0)
+	return cmp;
 
-  /* Now reduce both clusters to their ancestors at the point where both have
-     a common parent; these can be directly compared.  */
-  while (cl1->parent != cl2->parent)
-    cl1 = cl1->parent, cl2 = cl2->parent;
+      return 1;
+    }
+  else if (cl1->depth < cl2->depth)
+    {
+      do
+	cl2 = cl2->parent;
+      while (cl1->depth < cl2->depth);
+      int cmp = hol_cousin_cluster_cmp (cl1, cl2);
+      if (cmp != 0)
+	return cmp;
 
-  return group_cmp (cl1->group, cl2->group, cl2->index - cl1->index);
+      return -1;
+    }
+  else
+    return hol_cousin_cluster_cmp (cl1, cl2);
 }
 
 /* Return the ancestor of CL that's just below the root (i.e., has a parent
@@ -695,17 +764,7 @@ hol_cluster_base (struct hol_cluster *cl)
   return cl;
 }
 
-/* Return true if CL1 is a child of CL2.  */
-static int
-hol_cluster_is_child (const struct hol_cluster *cl1,
-		      const struct hol_cluster *cl2)
-{
-  while (cl1 && cl1 != cl2)
-    cl1 = cl1->parent;
-  return cl1 == cl2;
-}
-
-/* Given the name of a OPTION_DOC option, modifies NAME to start at the tail
+/* Given the name of an OPTION_DOC option, modifies *NAME to start at the tail
    that should be used for comparisons, and returns true iff it should be
    treated as a non-option.  */
 static int
@@ -713,92 +772,129 @@ canon_doc_option (const char **name)
 {
   int non_opt;
   /* Skip initial whitespace.  */
-  while (isspace (**name))
+  while (isspace ((unsigned char) **name))
     (*name)++;
-  /* Decide whether this looks like an option (leading `-') or not.  */
+  /* Decide whether this looks like an option (leading '-') or not.  */
   non_opt = (**name != '-');
   /* Skip until part of name used for sorting.  */
-  while (**name && !isalnum (**name))
+  while (**name && !isalnum ((unsigned char) **name))
     (*name)++;
   return non_opt;
 }
 
-/* Order ENTRY1 & ENTRY2 by the order which they should appear in a help
-   listing.  */
+/* Order ENTRY1 and ENTRY2 by the order which they should appear in a help
+   listing.
+   This function implements a total order, that is:
+     - if cmp (entry1, entry2) < 0 and cmp (entry2, entry3) < 0,
+       then cmp (entry1, entry3) < 0.
+     - if cmp (entry1, entry2) < 0 and cmp (entry2, entry3) == 0,
+       then cmp (entry1, entry3) < 0.
+     - if cmp (entry1, entry2) == 0 and cmp (entry2, entry3) < 0,
+       then cmp (entry1, entry3) < 0.
+     - if cmp (entry1, entry2) == 0 and cmp (entry2, entry3) == 0,
+       then cmp (entry1, entry3) == 0.  */
 static int
 hol_entry_cmp (const struct hol_entry *entry1,
 	       const struct hol_entry *entry2)
 {
-  /* The group numbers by which the entries should be ordered; if either is
-     in a cluster, then this is just the group within the cluster.  */
-  int group1 = entry1->group, group2 = entry2->group;
+  /* First, compare the group numbers.  For entries within a cluster, what
+     matters is the group number of the base cluster in which the entry
+     resides.  */
+  int group1 = (entry1->cluster
+		? hol_cluster_base (entry1->cluster)->group
+		: entry1->group);
+  int group2 = (entry2->cluster
+		? hol_cluster_base (entry2->cluster)->group
+		: entry2->group);
+  int cmp = group_cmp (group1, group2);
+  if (cmp != 0)
+    return cmp;
 
-  if (entry1->cluster != entry2->cluster)
+  /* The group numbers are the same.  */
+
+  /* Entries that are not in a cluster come before entries in a cluster.  */
+  cmp = (entry1->cluster != NULL) - (entry2->cluster != NULL);
+  if (cmp != 0)
+    return cmp;
+
+  /* Compare the clusters.  */
+  if (entry1->cluster != NULL)
     {
-      /* The entries are not within the same cluster, so we can't compare them
-	 directly, we have to use the appropriate clustering level too.  */
-      if (! entry1->cluster)
-	/* ENTRY1 is at the `base level', not in a cluster, so we have to
-	   compare it's group number with that of the base cluster in which
-	   ENTRY2 resides.  Note that if they're in the same group, the
-	   clustered option always comes last.  */
-	return group_cmp (group1, hol_cluster_base (entry2->cluster)->group, -1);
-      else if (! entry2->cluster)
-	/* Likewise, but ENTRY2's not in a cluster.  */
-	return group_cmp (hol_cluster_base (entry1->cluster)->group, group2, 1);
-      else
-	/* Both entries are in clusters, we can just compare the clusters.  */
-	return hol_cluster_cmp (entry1->cluster, entry2->cluster);
+      cmp = hol_cluster_cmp (entry1->cluster, entry2->cluster);
+      if (cmp != 0)
+	return cmp;
     }
-  else if (group1 == group2)
-    /* The entries are both in the same cluster and group, so compare them
-       alphabetically.  */
+
+  /* For entries in the same cluster, compare also the group numbers
+     within the cluster.  */
+  cmp = group_cmp (entry1->group, entry2->group);
+  if (cmp != 0)
+    return cmp;
+
+  /* The entries are both in the same group and the same cluster.  */
+
+  /* 'documentation' options always follow normal options (or documentation
+     options that *look* like normal options).  */
+  const char *long1 = hol_entry_first_long (entry1);
+  const char *long2 = hol_entry_first_long (entry2);
+  int doc1 =
+    (odoc (entry1->opt) ? long1 != NULL && canon_doc_option (&long1) : 0);
+  int doc2 =
+    (odoc (entry2->opt) ? long2 != NULL && canon_doc_option (&long2) : 0);
+  cmp = doc1 - doc2;
+  if (cmp != 0)
+    return cmp;
+
+  /* Compare the entries alphabetically.  */
+
+  /* First, compare the first character of the options.
+     Put entries without *any* valid options (such as options with
+     OPTION_HIDDEN set) first.  But as they're not displayed, it doesn't
+     matter where they are.  */
+  int short1 = hol_entry_first_short (entry1);
+  int short2 = hol_entry_first_short (entry2);
+  unsigned char first1 = short1 ? short1 : long1 != NULL ? *long1 : 0;
+  unsigned char first2 = short2 ? short2 : long2 != NULL ? *long2 : 0;
+  /* Compare ignoring case.  */
+  /* Use tolower, not _tolower, since the latter has undefined behaviour
+     for characters that are not uppercase letters.  */
+  cmp = tolower (first1) - tolower (first2);
+  if (cmp != 0)
+    return cmp;
+  /* When the options start with the same letter (ignoring case), lower-case
+     comes first.  */
+  cmp = first2 - first1;
+  if (cmp != 0)
+    return cmp;
+
+  /* The first character of the options agree.  */
+
+  /* Put entries with a short option before entries without a short option.  */
+  cmp = (short1 != 0) - (short2 != 0);
+  if (cmp != 0)
+    return cmp;
+
+  /* Compare entries without a short option by comparing the long option.  */
+  if (short1 == 0)
     {
-      int short1 = hol_entry_first_short (entry1);
-      int short2 = hol_entry_first_short (entry2);
-      int doc1 = odoc (entry1->opt);
-      int doc2 = odoc (entry2->opt);
-      const char *long1 = hol_entry_first_long (entry1);
-      const char *long2 = hol_entry_first_long (entry2);
+      cmp = (long1 != NULL) - (long2 != NULL);
+      if (cmp != 0)
+	return cmp;
 
-      if (doc1)
-	doc1 = long1 != NULL && canon_doc_option (&long1);
-      if (doc2)
-	doc2 = long2 != NULL && canon_doc_option (&long2);
-
-      if (doc1 != doc2)
-	/* `documentation' options always follow normal options (or
-	   documentation options that *look* like normal options).  */
-	return doc1 - doc2;
-      else if (!short1 && !short2 && long1 && long2)
-	/* Only long options.  */
-	return __strcasecmp (long1, long2);
-      else
-	/* Compare short/short, long/short, short/long, using the first
-	   character of long options.  Entries without *any* valid
-	   options (such as options with OPTION_HIDDEN set) will be put
-	   first, but as they're not displayed, it doesn't matter where
-	   they are.  */
+      if (long1 != NULL)
 	{
-	  char first1 = short1 ? short1 : long1 ? *long1 : 0;
-	  char first2 = short2 ? short2 : long2 ? *long2 : 0;
-#ifdef _tolower
-	  int lower_cmp = _tolower (first1) - _tolower (first2);
-#else
-	  int lower_cmp = tolower (first1) - tolower (first2);
-#endif
-	  /* Compare ignoring case, except when the options are both the
-	     same letter, in which case lower-case always comes first.  */
-	  return lower_cmp ? lower_cmp : first2 - first1;
-	}
+	  cmp = __strcasecmp (long1, long2);
+	  if (cmp != 0)
+	    return cmp;
+        }
     }
-  else
-    /* Within the same cluster, but not the same group, so just compare
-       groups.  */
-    return group_cmp (group1, group2, 0);
+
+  /* We're out of comparison criteria.  At this point, if ENTRY1 != ENTRY2,
+     the order of these entries will be unpredictable.  */
+  return 0;
 }
 
-/* Version of hol_entry_cmp with correct signature for qsort.  */
+/* Variant of hol_entry_cmp with correct signature for qsort.  */
 static int
 hol_entry_qcmp (const void *entry1_v, const void *entry2_v)
 {
@@ -816,6 +912,9 @@ hol_sort (struct hol *hol)
 	   hol_entry_qcmp);
 }
 
+/* -------------------------------------------------------------------------- */
+/* Constructing the HOL.                                                      */
+
 /* Append MORE to HOL, destroying MORE in the process.  Options in HOL shadow
    any in MORE with the same name.  */
 static void
@@ -867,7 +966,8 @@ hol_append (struct hol *hol, struct hol *more)
 
 	  /* Fix up the short options pointers from HOL.  */
 	  for (e = entries, left = hol->num_entries; left > 0; e++, left--)
-	    e->short_options += (short_options - hol->short_options);
+	    e->short_options
+	      = short_options + (e->short_options - hol->short_options);
 
 	  /* Now add the short options from MORE, fixing up its entries
 	     too.  */
@@ -910,6 +1010,32 @@ hol_append (struct hol *hol, struct hol *more)
   hol_free (more);
 }
 
+/* Make a HOL containing all levels of options in ARGP.  CLUSTER is the
+   cluster in which ARGP's entries should be clustered, or 0.  */
+static struct hol *
+argp_hol (const struct argp *argp, struct hol_cluster *cluster)
+{
+  const struct argp_child *child = argp->children;
+  struct hol *hol = make_hol (argp, cluster);
+  if (child)
+    while (child->argp)
+      {
+	struct hol_cluster *child_cluster =
+	  ((child->group || child->header)
+	   /* Put CHILD->argp within its own cluster.  */
+	   ? hol_add_cluster (hol, child->group, child->header,
+			      child - argp->children, cluster, argp)
+	   /* Just merge it into the parent's cluster.  */
+	   : cluster);
+	hol_append (hol, argp_hol (child->argp, child_cluster)) ;
+	child++;
+      }
+  return hol;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Printing the HOL.                                                          */
+
 /* Inserts enough spaces to make sure STREAM is at column COL.  */
 static void
 indent_to (argp_fmtstream_t stream, unsigned col)
@@ -954,7 +1080,7 @@ arg (const struct argp_option *real, const char *req_fmt, const char *opt_fmt,
 /* State used during the execution of hol_help.  */
 struct hol_help_state
 {
-  /* PREV_ENTRY should contain the previous entry printed, or 0.  */
+  /* PREV_ENTRY should contain the previous entry printed, or NULL.  */
   struct hol_entry *prev_entry;
 
   /* If an entry is in a different group from the previous one, and SEP_GROUPS
@@ -1030,6 +1156,16 @@ print_header (const char *str, const struct argp *argp,
 
   if (fstr != tstr)
     free ((char *) fstr);
+}
+
+/* Return true if CL1 is a child of CL2.  */
+static int
+hol_cluster_is_child (const struct hol_cluster *cl1,
+		      const struct hol_cluster *cl2)
+{
+  while (cl1 && cl1 != cl2)
+    cl1 = cl1->parent;
+  return cl1 == cl2;
 }
 
 /* Inserts a comma if this isn't the first item on the line, and then makes
@@ -1343,29 +1479,6 @@ hol_usage (struct hol *hol, argp_fmtstream_t stream)
 	hol_entry_long_iterate (entry, usage_long_opt,
 				entry->argp->argp_domain, stream);
     }
-}
-
-/* Make a HOL containing all levels of options in ARGP.  CLUSTER is the
-   cluster in which ARGP's entries should be clustered, or 0.  */
-static struct hol *
-argp_hol (const struct argp *argp, struct hol_cluster *cluster)
-{
-  const struct argp_child *child = argp->children;
-  struct hol *hol = make_hol (argp, cluster);
-  if (child)
-    while (child->argp)
-      {
-	struct hol_cluster *child_cluster =
-	  ((child->group || child->header)
-	   /* Put CHILD->argp within its own cluster.  */
-	   ? hol_add_cluster (hol, child->group, child->header,
-			      child - argp->children, cluster, argp)
-	   /* Just merge it into the parent's cluster.  */
-	   : cluster);
-	hol_append (hol, argp_hol (child->argp, child_cluster)) ;
-	child++;
-      }
-  return hol;
 }
 
 /* Calculate how many different levels with alternative args strings exist in

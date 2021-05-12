@@ -395,9 +395,12 @@ update_tls_slotinfo (struct link_map *new)
 	}
     }
 
-  if (__builtin_expect (++GL(dl_tls_generation) == 0, 0))
+  size_t newgen = GL(dl_tls_generation) + 1;
+  if (__glibc_unlikely (newgen == 0))
     _dl_fatal_printf (N_("\
 TLS generation counter wrapped!  Please report this."));
+  /* Can be read concurrently.  */
+  atomic_store_relaxed (&GL(dl_tls_generation), newgen);
 
   /* We need a second pass for static tls data, because
      _dl_update_slotinfo must not be run while calls to
@@ -426,7 +429,7 @@ TLS generation counter wrapped!  Please report this."));
 	  _dl_update_slotinfo (imap->l_tls_modid);
 #endif
 
-	  GL(dl_init_static_tls) (imap);
+	  dl_init_static_tls (imap);
 	  assert (imap->l_need_tls_init == 0);
 	}
     }
@@ -887,16 +890,6 @@ no more namespaces available for dlmopen()"));
 	 state if relocation failed, for example.  */
       if (args.map)
 	{
-	  /* Maybe some of the modules which were loaded use TLS.
-	     Since it will be removed in the following _dl_close call
-	     we have to mark the dtv array as having gaps to fill the
-	     holes.  This is a pessimistic assumption which won't hurt
-	     if not true.  There is no need to do this when we are
-	     loading the auditing DSOs since TLS has not yet been set
-	     up.  */
-	  if ((mode & __RTLD_AUDIT) == 0)
-	    GL(dl_tls_dtv_gaps) = true;
-
 	  _dl_close_worker (args.map, true);
 
 	  /* All l_nodelete_pending objects should have been deleted

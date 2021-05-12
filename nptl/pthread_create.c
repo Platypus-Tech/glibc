@@ -42,18 +42,19 @@
 #include <stap-probe.h>
 
 
-/* Nozero if debugging mode is enabled.  */
-int __pthread_debug;
-
 /* Globally enabled events.  */
 static td_thr_events_t __nptl_threads_events __attribute_used__;
 
 /* Pointer to descriptor with the last event.  */
 static struct pthread *__nptl_last_event __attribute_used__;
 
-/* Number of threads running.  */
-unsigned int __nptl_nthreads = 1;
-
+#ifdef SHARED
+/* This variable is used to access _rtld_global from libthread_db.  If
+   GDB loads libpthread before ld.so, it is not possible to resolve
+   _rtld_global directly during libpthread initialization.  */
+static struct rtld_global *__nptl_rtld_global __attribute_used__
+  = &_rtld_global;
+#endif
 
 /* Code to allocate and deallocate a stack.  */
 #include "allocatestack.c"
@@ -206,171 +207,6 @@ static int create_thread (struct pthread *pd, const struct pthread_attr *attr,
 
 #include <createthread.c>
 
-
-struct pthread *
-__find_in_stack_list (struct pthread *pd)
-{
-  list_t *entry;
-  struct pthread *result = NULL;
-
-  lll_lock (GL (dl_stack_cache_lock), LLL_PRIVATE);
-
-  list_for_each (entry, &GL (dl_stack_used))
-    {
-      struct pthread *curp;
-
-      curp = list_entry (entry, struct pthread, list);
-      if (curp == pd)
-	{
-	  result = curp;
-	  break;
-	}
-    }
-
-  if (result == NULL)
-    list_for_each (entry, &GL (dl_stack_user))
-      {
-	struct pthread *curp;
-
-	curp = list_entry (entry, struct pthread, list);
-	if (curp == pd)
-	  {
-	    result = curp;
-	    break;
-	  }
-      }
-
-  lll_unlock (GL (dl_stack_cache_lock), LLL_PRIVATE);
-
-  return result;
-}
-
-
-/* Deallocate POSIX thread-local-storage.  */
-void
-attribute_hidden
-__nptl_deallocate_tsd (void)
-{
-  struct pthread *self = THREAD_SELF;
-
-  /* Maybe no data was ever allocated.  This happens often so we have
-     a flag for this.  */
-  if (THREAD_GETMEM (self, specific_used))
-    {
-      size_t round;
-      size_t cnt;
-
-      round = 0;
-      do
-	{
-	  size_t idx;
-
-	  /* So far no new nonzero data entry.  */
-	  THREAD_SETMEM (self, specific_used, false);
-
-	  for (cnt = idx = 0; cnt < PTHREAD_KEY_1STLEVEL_SIZE; ++cnt)
-	    {
-	      struct pthread_key_data *level2;
-
-	      level2 = THREAD_GETMEM_NC (self, specific, cnt);
-
-	      if (level2 != NULL)
-		{
-		  size_t inner;
-
-		  for (inner = 0; inner < PTHREAD_KEY_2NDLEVEL_SIZE;
-		       ++inner, ++idx)
-		    {
-		      void *data = level2[inner].data;
-
-		      if (data != NULL)
-			{
-			  /* Always clear the data.  */
-			  level2[inner].data = NULL;
-
-			  /* Make sure the data corresponds to a valid
-			     key.  This test fails if the key was
-			     deallocated and also if it was
-			     re-allocated.  It is the user's
-			     responsibility to free the memory in this
-			     case.  */
-			  if (level2[inner].seq
-			      == __pthread_keys[idx].seq
-			      /* It is not necessary to register a destructor
-				 function.  */
-			      && __pthread_keys[idx].destr != NULL)
-			    /* Call the user-provided destructor.  */
-			    __pthread_keys[idx].destr (data);
-			}
-		    }
-		}
-	      else
-		idx += PTHREAD_KEY_1STLEVEL_SIZE;
-	    }
-
-	  if (THREAD_GETMEM (self, specific_used) == 0)
-	    /* No data has been modified.  */
-	    goto just_free;
-	}
-      /* We only repeat the process a fixed number of times.  */
-      while (__builtin_expect (++round < PTHREAD_DESTRUCTOR_ITERATIONS, 0));
-
-      /* Just clear the memory of the first block for reuse.  */
-      memset (&THREAD_SELF->specific_1stblock, '\0',
-	      sizeof (self->specific_1stblock));
-
-    just_free:
-      /* Free the memory for the other blocks.  */
-      for (cnt = 1; cnt < PTHREAD_KEY_1STLEVEL_SIZE; ++cnt)
-	{
-	  struct pthread_key_data *level2;
-
-	  level2 = THREAD_GETMEM_NC (self, specific, cnt);
-	  if (level2 != NULL)
-	    {
-	      /* The first block is allocated as part of the thread
-		 descriptor.  */
-	      free (level2);
-	      THREAD_SETMEM_NC (self, specific, cnt, NULL);
-	    }
-	}
-
-      THREAD_SETMEM (self, specific_used, false);
-    }
-}
-
-
-/* Deallocate a thread's stack after optionally making sure the thread
-   descriptor is still valid.  */
-void
-__free_tcb (struct pthread *pd)
-{
-  /* The thread is exiting now.  */
-  if (__builtin_expect (atomic_bit_test_set (&pd->cancelhandling,
-					     TERMINATED_BIT) == 0, 1))
-    {
-      /* Remove the descriptor from the list.  */
-      if (DEBUGGING_P && __find_in_stack_list (pd) == NULL)
-	/* Something is really wrong.  The descriptor for a still
-	   running thread is gone.  */
-	abort ();
-
-      /* Free TPP data.  */
-      if (__glibc_unlikely (pd->tpp != NULL))
-	{
-	  struct priority_protection_data *tpp = pd->tpp;
-
-	  pd->tpp = NULL;
-	  free (tpp);
-	}
-
-      /* Queue the stack memory block for reuse and exit the process.  The
-	 kernel will signal via writing to the address returned by
-	 QUEUE-STACK when the stack is available.  */
-      __deallocate_stack (pd);
-    }
-}
-
 /* Local function to start thread and handle cleanup.
    createthread.c defines the macro START_THREAD_DEFN to the
    declaration that its create_thread function will refer to, and
@@ -387,7 +223,7 @@ START_THREAD_DEFN
   __ctype_init ();
 
 #ifndef __ASSUME_SET_ROBUST_LIST
-  if (__set_robust_list_avail >= 0)
+  if (__nptl_set_robust_list_avail)
 #endif
     {
       /* This call should never fail because the initial call in init.c
@@ -443,7 +279,7 @@ START_THREAD_DEFN
 	 have ownership (see CONCURRENCY NOTES above).  */
       if (__glibc_unlikely (pd->stopped_start))
 	{
-	  int oldtype = CANCEL_ASYNC ();
+	  int oldtype = LIBC_CANCEL_ASYNC ();
 
 	  /* Get the lock the parent locked to force synchronization.  */
 	  lll_lock (pd->lock, LLL_PRIVATE);
@@ -453,7 +289,7 @@ START_THREAD_DEFN
 	  /* And give it up right away.  */
 	  lll_unlock (pd->lock, LLL_PRIVATE);
 
-	  CANCEL_RESET (oldtype);
+	  LIBC_CANCEL_RESET (oldtype);
 	}
 
       LIBC_PROBE (pthread_start, 3, (pthread_t) pd, pd->start_routine, pd->arg);
@@ -537,7 +373,7 @@ START_THREAD_DEFN
   /* We let the kernel do the notification if it is able to do so.
      If we have to do it here there for sure are no PI mutexes involved
      since the kernel support for them is even more recent.  */
-  if (__set_robust_list_avail < 0
+  if (!__nptl_set_robust_list_avail
       && __builtin_expect (robust != (void *) &pd->robust_head, 0))
     {
       do
@@ -583,7 +419,7 @@ START_THREAD_DEFN
   /* If the thread is detached free the TCB.  */
   if (IS_DETACHED (pd))
     /* Free the TCB.  */
-    __free_tcb (pd);
+    __nptl_free_tcb (pd);
 
   /* We cannot call '_exit' here.  '_exit' will terminate the process.
 
@@ -850,7 +686,7 @@ __pthread_create_2_1 (pthread_t *newthread, const pthread_attr_t *attr,
 	    futex_wake (&pd->setxid_futex, 1, FUTEX_PRIVATE);
 
 	  /* Free the resources.  */
-	  __deallocate_stack (pd);
+	  __nptl_deallocate_stack (pd);
 	}
 
       /* We have to translate error codes.  */

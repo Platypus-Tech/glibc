@@ -295,6 +295,11 @@ extern int euidaccess (const char *__name, int __type)
 /* An alias for `euidaccess', used by some other systems.  */
 extern int eaccess (const char *__name, int __type)
      __THROW __nonnull ((1));
+
+/* Execute program relative to a directory file descriptor.  */
+extern int execveat (int __fd, const char *__path, char *const __argv[],
+                     char *const __envp[], int __flags)
+    __THROW __nonnull ((2, 3));
 #endif
 
 #ifdef __USE_ATFILE
@@ -831,7 +836,7 @@ extern int symlinkat (const char *__from, int __tofd,
 /* Like readlink but a relative PATH is interpreted relative to FD.  */
 extern ssize_t readlinkat (int __fd, const char *__restrict __path,
 			   char *__restrict __buf, size_t __len)
-     __THROW __nonnull ((2, 3)) __wur __attr_access ((__read_only__, 3, 4));
+     __THROW __nonnull ((2, 3)) __wur __attr_access ((__write_only__, 3, 4));
 #endif
 
 /* Remove the link NAME.  */

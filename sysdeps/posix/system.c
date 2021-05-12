@@ -82,10 +82,9 @@ cancel_handler (void *arg)
   __kill_noerrno (args->pid, SIGKILL);
 
   int state;
-  __libc_ptf_call (__pthread_setcancelstate,
-                   (PTHREAD_CANCEL_DISABLE, &state), 0);
+  __pthread_setcancelstate (PTHREAD_CANCEL_DISABLE, &state);
   TEMP_FAILURE_RETRY (__waitpid (args->pid, NULL, 0));
-  __libc_ptf_call (__pthread_setcancelstate, (state, NULL), 0);
+  __pthread_setcancelstate (state, NULL);
 
   DO_LOCK ();
   if (SUB_REF () == 0)
@@ -175,6 +174,10 @@ do_system (const char *line)
       __libc_cleanup_region_end (0);
 #endif
     }
+  else
+   /* POSIX states that failure to execute the shell should return
+      as if the shell had terminated using _exit(127).  */
+   status = W_EXITCODE (127, 0);
 
   DO_LOCK ();
   if (SUB_REF () == 0)

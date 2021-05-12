@@ -23,6 +23,9 @@
 /* On powerpc64, use @notoc.  */
 #undef  USE_PPC64_NOTOC
 
+/* On powerpc64, define if the compiler supports -mcpu=power10.  */
+#undef USE_PPC64_MCPU_POWER10
+
 /* Define if _Unwind_Find_FDE should be exported from glibc.  */
 #undef  EXPORT_UNWIND_FIND_FDE
 
@@ -187,8 +190,18 @@
 /* Define if gcc supports attribute ifunc.  */
 #undef HAVE_GCC_IFUNC
 
+/* Define if CC supports attribute retain.  */
+#undef HAVE_GNU_RETAIN
+
 /* Define if the linker defines __ehdr_start.  */
 #undef HAVE_EHDR_START
+
+/* Define to 1 if the assembler needs intermediate aliases to define
+   multiple symbol versions for one symbol.  */
+#define SYMVER_NEEDS_ALIAS 0
+
+/* Define to 1 if libpthread actually resides in libc.  */
+#define PTHREAD_IN_LIBC 0
 
 /*
  */
@@ -259,6 +272,9 @@
 /* Build glibc with tunables support.  */
 #define HAVE_TUNABLES 0
 
+/* Define if static PIE is supported.  */
+#undef SUPPORT_STATIC_PIE
+
 /* Define if static PIE is enabled.  */
 #define ENABLE_STATIC_PIE 0
 
@@ -268,5 +284,14 @@
 
 /* The default value of x86 CET control.  */
 #define DEFAULT_DL_X86_CET_CONTROL cet_elf_property
+
+/* Define if x86 ISA level should be included in shared libraries.  */
+#undef INCLUDE_X86_ISA_LEVEL
+
+/* Define if -msahf is enabled by default on x86.  */
+#undef HAVE_X86_LAHF_SAHF
+
+/* Define if -mmovbe is enabled by default on x86.  */
+#undef HAVE_X86_MOVBE
 
 #endif

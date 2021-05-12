@@ -143,7 +143,7 @@ addgetnetgrentX (struct database_dyn *db, int fd, request_header *req,
   *tofreep = NULL;
 
   if (netgroup_database == NULL
-      && __nss_database_lookup2 ("netgroup", NULL, NULL, &netgroup_database))
+      && !__nss_database_get (nss_database_netgroup, &netgroup_database))
     {
       /* No such service.  */
       cacheable = do_notfound (db, fd, req, key, &dataset, &total, &timeout,
@@ -248,7 +248,7 @@ addgetnetgrentX (struct database_dyn *db, int fd, request_header *req,
 					     : NULL);
 				    ndomain = (ndomain ? newbuf + ndomaindiff
 					       : NULL);
-				    buffer = newbuf;
+				    *tofreep = buffer = newbuf;
 				  }
 
 				nhost = memcpy (buffer + bufused,
@@ -319,7 +319,7 @@ addgetnetgrentX (struct database_dyn *db, int fd, request_header *req,
 		    else if (status == NSS_STATUS_TRYAGAIN && e == ERANGE)
 		      {
 			buflen *= 2;
-			buffer = xrealloc (buffer, buflen);
+			*tofreep = buffer = xrealloc (buffer, buflen);
 		      }
 		    else if (status == NSS_STATUS_RETURN
 			     || status == NSS_STATUS_NOTFOUND

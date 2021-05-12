@@ -26,21 +26,32 @@
 #include <atomic.h>
 #include <futex-internal.h>
 #include <stap-probe.h>
-
-#ifndef lll_lock_elision
-#define lll_lock_elision(lock, try_lock, private)	({ \
-      lll_lock (lock, private); 0; })
-#endif
-
-#ifndef lll_trylock_elision
-#define lll_trylock_elision(a,t) lll_trylock(a)
-#endif
+#include <shlib-compat.h>
 
 /* Some of the following definitions differ when pthread_mutex_cond_lock.c
    includes this file.  */
 #ifndef LLL_MUTEX_LOCK
-# define LLL_MUTEX_LOCK(mutex) \
+/* lll_lock with single-thread optimization.  */
+static inline void
+lll_mutex_lock_optimized (pthread_mutex_t *mutex)
+{
+  /* The single-threaded optimization is only valid for private
+     mutexes.  For process-shared mutexes, the mutex could be in a
+     shared mapping, so synchronization with another process is needed
+     even without any threads.  If the lock is already marked as
+     acquired, POSIX requires that pthread_mutex_lock deadlocks for
+     normal mutexes, so skip the optimization in that case as
+     well.  */
+  int private = PTHREAD_MUTEX_PSHARED (mutex);
+  if (private == LLL_PRIVATE && SINGLE_THREAD_P && mutex->__data.__lock == 0)
+    mutex->__data.__lock = 1;
+  else
+    lll_lock (mutex->__data.__lock, private);
+}
+
+# define LLL_MUTEX_LOCK(mutex)						\
   lll_lock ((mutex)->__data.__lock, PTHREAD_MUTEX_PSHARED (mutex))
+# define LLL_MUTEX_LOCK_OPTIMIZED(mutex) lll_mutex_lock_optimized (mutex)
 # define LLL_MUTEX_TRYLOCK(mutex) \
   lll_trylock ((mutex)->__data.__lock)
 # define LLL_ROBUST_MUTEX_LOCK_MODIFIER 0
@@ -50,17 +61,15 @@
 # define LLL_MUTEX_TRYLOCK_ELISION(mutex) \
   lll_trylock_elision((mutex)->__data.__lock, (mutex)->__data.__elision, \
 		   PTHREAD_MUTEX_PSHARED (mutex))
-#endif
-
-#ifndef FORCE_ELISION
-#define FORCE_ELISION(m, s)
+# define PTHREAD_MUTEX_LOCK ___pthread_mutex_lock
+# define PTHREAD_MUTEX_VERSIONS 1
 #endif
 
 static int __pthread_mutex_lock_full (pthread_mutex_t *mutex)
      __attribute_noinline__;
 
 int
-__pthread_mutex_lock (pthread_mutex_t *mutex)
+PTHREAD_MUTEX_LOCK (pthread_mutex_t *mutex)
 {
   /* See concurrency notes regarding mutex type which is loaded from __kind
      in struct __pthread_mutex_s in sysdeps/nptl/bits/thread-shared-types.h.  */
@@ -77,10 +86,10 @@ __pthread_mutex_lock (pthread_mutex_t *mutex)
       FORCE_ELISION (mutex, goto elision);
     simple:
       /* Normal mutex.  */
-      LLL_MUTEX_LOCK (mutex);
+      LLL_MUTEX_LOCK_OPTIMIZED (mutex);
       assert (mutex->__data.__owner == 0);
     }
-#ifdef HAVE_ELISION
+#if ENABLE_ELISION_SUPPORT
   else if (__glibc_likely (type == PTHREAD_MUTEX_TIMED_ELISION_NP))
     {
   elision: __attribute__((unused))
@@ -112,7 +121,7 @@ __pthread_mutex_lock (pthread_mutex_t *mutex)
 	}
 
       /* We have to get the mutex.  */
-      LLL_MUTEX_LOCK (mutex);
+      LLL_MUTEX_LOCK_OPTIMIZED (mutex);
 
       assert (mutex->__data.__owner == 0);
       mutex->__data.__count = 1;
@@ -598,10 +607,19 @@ __pthread_mutex_lock_full (pthread_mutex_t *mutex)
 
   return 0;
 }
-#ifndef __pthread_mutex_lock
-weak_alias (__pthread_mutex_lock, pthread_mutex_lock)
-hidden_def (__pthread_mutex_lock)
-#endif
+
+#if PTHREAD_MUTEX_VERSIONS
+versioned_symbol (libpthread, ___pthread_mutex_lock, __pthread_mutex_lock,
+		  GLIBC_2_34);
+libc_hidden_ver (___pthread_mutex_lock, __pthread_mutex_lock)
+versioned_symbol (libpthread, ___pthread_mutex_lock, pthread_mutex_lock,
+		  GLIBC_2_0);
+
+# if OTHER_SHLIB_COMPAT (libpthread, GLIBC_2_0, GLIBC_2_34)
+compat_symbol (libpthread, ___pthread_mutex_lock, __pthread_mutex_lock,
+	       GLIBC_2_0);
+# endif
+#endif /* PTHREAD_MUTEX_VERSIONS */
 
 
 #ifdef NO_INCR

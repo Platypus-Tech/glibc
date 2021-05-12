@@ -30,7 +30,6 @@
 #include <lowlevellock.h>
 #include <stackinfo.h>
 #include <internaltypes.h>
-#include <pthread-functions.h>
 #include <atomic.h>
 #include <kernel-features.h>
 #include <errno.h>
@@ -199,9 +198,11 @@ enum
 
 
 /* Default pthread attributes.  */
-extern union pthread_attr_transparent __default_pthread_attr attribute_hidden;
-extern int __default_pthread_attr_lock attribute_hidden;
-/* Called from __libpthread_freeres to deallocate the default attribute.  */
+extern union pthread_attr_transparent __default_pthread_attr;
+libc_hidden_proto (__default_pthread_attr)
+extern int __default_pthread_attr_lock;
+libc_hidden_proto (__default_pthread_attr_lock)
+/* Called from __libc_freeres to deallocate the default attribute.  */
 extern void __default_pthread_attr_freeres (void) attribute_hidden;
 
 /* Size and alignment of static TLS block.  */
@@ -217,41 +218,36 @@ extern int __concurrency_level attribute_hidden;
 
 /* Thread-local data key handling.  */
 extern struct pthread_key_struct __pthread_keys[PTHREAD_KEYS_MAX];
-hidden_proto (__pthread_keys)
+libc_hidden_proto (__pthread_keys)
 
 /* Number of threads running.  */
-extern unsigned int __nptl_nthreads attribute_hidden;
+extern unsigned int __nptl_nthreads;
+libc_hidden_proto (__nptl_nthreads)
 
 #ifndef __ASSUME_SET_ROBUST_LIST
-/* Negative if we do not have the system call and we can use it.  */
-extern int __set_robust_list_avail attribute_hidden;
+/* True if the set_robust_list system call works.  Initialized in
+   __tls_init_tp.  */
+extern bool __nptl_set_robust_list_avail;
+rtld_hidden_proto (__nptl_set_robust_list_avail)
 #endif
 
 /* Thread Priority Protection.  */
-extern int __sched_fifo_min_prio attribute_hidden;
-extern int __sched_fifo_max_prio attribute_hidden;
-extern void __init_sched_fifo_prio (void) attribute_hidden;
-extern int __pthread_tpp_change_priority (int prev_prio, int new_prio)
-     attribute_hidden;
-extern int __pthread_current_priority (void) attribute_hidden;
+extern int __sched_fifo_min_prio;
+libc_hidden_proto (__sched_fifo_min_prio)
+extern int __sched_fifo_max_prio;
+libc_hidden_proto (__sched_fifo_max_prio)
+extern void __init_sched_fifo_prio (void);
+libc_hidden_proto (__init_sched_fifo_prio)
+extern int __pthread_tpp_change_priority (int prev_prio, int new_prio);
+libc_hidden_proto (__pthread_tpp_change_priority)
+extern int __pthread_current_priority (void);
+libc_hidden_proto (__pthread_current_priority)
 
-/* The library can run in debugging mode where it performs a lot more
-   tests.  */
-extern int __pthread_debug attribute_hidden;
-/** For now disable debugging support.  */
-#if 0
-# define DEBUGGING_P __builtin_expect (__pthread_debug, 0)
-# define INVALID_TD_P(pd) (DEBUGGING_P && __find_in_stack_list (pd) == NULL)
-# define INVALID_NOT_TERMINATED_TD_P(pd) INVALID_TD_P (pd)
-#else
-# define DEBUGGING_P 0
-/* Simplified test.  This will not catch all invalid descriptors but
-   is better than nothing.  And if the test triggers the thread
-   descriptor is guaranteed to be invalid.  */
-# define INVALID_TD_P(pd) __builtin_expect ((pd)->tid <= 0, 0)
-# define INVALID_NOT_TERMINATED_TD_P(pd) __builtin_expect ((pd)->tid < 0, 0)
-#endif
-
+/* This will not catch all invalid descriptors but is better than
+   nothing.  And if the test triggers the thread descriptor is
+   guaranteed to be invalid.  */
+#define INVALID_TD_P(pd) __builtin_expect ((pd)->tid <= 0, 0)
+#define INVALID_NOT_TERMINATED_TD_P(pd) __builtin_expect ((pd)->tid < 0, 0)
 
 /* Cancellation test.  */
 #define CANCELLATION_P(self) \
@@ -271,27 +267,22 @@ extern void __pthread_unwind (__pthread_unwind_buf_t *__buf)
      weak_function
 #endif
      ;
+libc_hidden_proto (__pthread_unwind)
 extern void __pthread_unwind_next (__pthread_unwind_buf_t *__buf)
      __cleanup_fct_attribute __attribute ((__noreturn__))
 #ifndef SHARED
      weak_function
 #endif
      ;
+/* NB: No hidden proto for __pthread_unwind_next: inside glibc, the
+   legacy unwinding mechanism is used.  */
+
 extern void __pthread_register_cancel (__pthread_unwind_buf_t *__buf)
      __cleanup_fct_attribute;
+libc_hidden_proto (__pthread_register_cancel)
 extern void __pthread_unregister_cancel (__pthread_unwind_buf_t *__buf)
      __cleanup_fct_attribute;
-#if IS_IN (libpthread)
-hidden_proto (__pthread_unwind)
-hidden_proto (__pthread_unwind_next)
-hidden_proto (__pthread_register_cancel)
-hidden_proto (__pthread_unregister_cancel)
-# ifdef SHARED
-extern void attribute_hidden pthread_cancel_init (void);
-# endif
-extern void __nptl_unwind_freeres (void) attribute_hidden;
-#endif
-
+libc_hidden_proto (__pthread_unregister_cancel)
 
 /* Called when a thread reacts on a cancellation request.  */
 static inline void
@@ -310,29 +301,20 @@ __do_cancel (void)
 
 /* Internal prototypes.  */
 
-/* Thread list handling.  */
-extern struct pthread *__find_in_stack_list (struct pthread *pd)
-     attribute_hidden;
-
 /* Deallocate a thread's stack after optionally making sure the thread
    descriptor is still valid.  */
-extern void __free_tcb (struct pthread *pd) attribute_hidden;
+extern void __nptl_free_tcb (struct pthread *pd);
+libc_hidden_proto (__nptl_free_tcb)
 
-/* Free allocated stack.  */
-extern void __deallocate_stack (struct pthread *pd) attribute_hidden;
-
-/* Mark all the stacks except for the current one as available.  This
-   function also re-initializes the lock for the stack cache.  */
-extern void __reclaim_stacks (void) attribute_hidden;
-
-/* Make all threads's stacks executable.  */
-extern int __make_stacks_executable (void **stack_endp) attribute_hidden;
+/* Change the permissions of a thread stack.  Called from
+   _dl_make_stacks_executable and pthread_create.  */
+int
+__nptl_change_stack_perm (struct pthread *pd);
+rtld_hidden_proto (__nptl_change_stack_perm)
 
 /* longjmp handling.  */
 extern void __pthread_cleanup_upto (__jmp_buf target, char *targetframe);
-#if IS_IN (libpthread)
-hidden_proto (__pthread_cleanup_upto)
-#endif
+libc_hidden_proto (__pthread_cleanup_upto)
 
 
 /* Functions with versioned interfaces.  */
@@ -353,25 +335,11 @@ extern void __nptl_death_event (void);
 hidden_proto (__nptl_create_event)
 hidden_proto (__nptl_death_event)
 
-/* Register the generation counter in the libpthread with the libc.  */
-#ifdef TLS_MULTIPLE_THREADS_IN_TCB
-extern void __libc_pthread_init (unsigned long int *ptr,
-				 void (*reclaim) (void),
-				 const struct pthread_functions *functions);
-#else
-extern int *__libc_pthread_init (unsigned long int *ptr,
-				 void (*reclaim) (void),
-				 const struct pthread_functions *functions);
+/* The fork generation counter, defined in libpthread.  */
+extern unsigned long int __fork_generation attribute_hidden;
 
-/* Variable set to a nonzero value either if more than one thread runs or ran,
-   or if a single-threaded process is trying to cancel itself.  See
-   nptl/descr.h for more context on the single-threaded process case.  */
-extern int __pthread_multiple_threads attribute_hidden;
-/* Pointer to the corresponding variable in libc.  */
-extern int *__libc_multiple_threads_ptr attribute_hidden;
-#endif
-
-extern void __pthread_init_static_tls (struct link_map *) attribute_hidden;
+/* Pointer to the fork generation counter in the thread library.  */
+extern unsigned long int *__fork_generation_pointer attribute_hidden;
 
 extern size_t __pthread_get_minstack (const pthread_attr_t *attr);
 
@@ -380,12 +348,15 @@ extern int __pthread_getschedparam (pthread_t thread_id, int *policy,
 				    struct sched_param *param);
 extern int __pthread_setschedparam (pthread_t thread_id, int policy,
 				    const struct sched_param *param);
-extern int __pthread_setcancelstate (int state, int *oldstate);
 extern int __pthread_mutex_init (pthread_mutex_t *__mutex,
 				 const pthread_mutexattr_t *__mutexattr);
+libc_hidden_proto (__pthread_mutex_init)
 extern int __pthread_mutex_destroy (pthread_mutex_t *__mutex);
+libc_hidden_proto (__pthread_mutex_destroy)
 extern int __pthread_mutex_trylock (pthread_mutex_t *_mutex);
+libc_hidden_proto (__pthread_mutex_trylock)
 extern int __pthread_mutex_lock (pthread_mutex_t *__mutex);
+libc_hidden_proto (__pthread_mutex_lock)
 extern int __pthread_mutex_timedlock (pthread_mutex_t *__mutex,
      const struct timespec *__abstime);
 extern int __pthread_mutex_cond_lock (pthread_mutex_t *__mutex)
@@ -393,11 +364,15 @@ extern int __pthread_mutex_cond_lock (pthread_mutex_t *__mutex)
 extern void __pthread_mutex_cond_lock_adjust (pthread_mutex_t *__mutex)
      attribute_hidden;
 extern int __pthread_mutex_unlock (pthread_mutex_t *__mutex);
+libc_hidden_proto (__pthread_mutex_unlock)
 extern int __pthread_mutex_unlock_usercnt (pthread_mutex_t *__mutex,
-					   int __decr) attribute_hidden;
+					   int __decr);
+libc_hidden_proto (__pthread_mutex_unlock_usercnt)
 extern int __pthread_mutexattr_init (pthread_mutexattr_t *attr);
+libc_hidden_proto (__pthread_mutexattr_init)
 extern int __pthread_mutexattr_destroy (pthread_mutexattr_t *attr);
 extern int __pthread_mutexattr_settype (pthread_mutexattr_t *attr, int kind);
+libc_hidden_proto (__pthread_mutexattr_settype)
 extern int __pthread_attr_destroy (pthread_attr_t *attr);
 libc_hidden_proto (__pthread_attr_destroy)
 extern int __pthread_attr_getdetachstate (const pthread_attr_t *attr,
@@ -439,18 +414,23 @@ extern int __pthread_rwlock_init (pthread_rwlock_t *__restrict __rwlock,
 				  __attr);
 extern int __pthread_rwlock_destroy (pthread_rwlock_t *__rwlock);
 extern int __pthread_rwlock_rdlock (pthread_rwlock_t *__rwlock);
+libc_hidden_proto (__pthread_rwlock_rdlock)
 extern int __pthread_rwlock_tryrdlock (pthread_rwlock_t *__rwlock);
 extern int __pthread_rwlock_wrlock (pthread_rwlock_t *__rwlock);
+libc_hidden_proto (__pthread_rwlock_wrlock)
 extern int __pthread_rwlock_trywrlock (pthread_rwlock_t *__rwlock);
 extern int __pthread_rwlock_unlock (pthread_rwlock_t *__rwlock);
 extern int __pthread_cond_broadcast (pthread_cond_t *cond);
+libc_hidden_proto (__pthread_cond_broadcast)
 extern int __pthread_cond_destroy (pthread_cond_t *cond);
 libc_hidden_proto (__pthread_cond_destroy)
 extern int __pthread_cond_init (pthread_cond_t *cond,
 				const pthread_condattr_t *cond_attr);
 libc_hidden_proto (__pthread_cond_init)
 extern int __pthread_cond_signal (pthread_cond_t *cond);
+libc_hidden_proto (__pthread_cond_signal)
 extern int __pthread_cond_wait (pthread_cond_t *cond, pthread_mutex_t *mutex);
+libc_hidden_proto (__pthread_cond_wait)
 
 #if __TIMESIZE == 64
 # define __pthread_clockjoin_np64 __pthread_clockjoin_np
@@ -474,64 +454,82 @@ libc_hidden_proto (__pthread_timedjoin_np64)
 extern int __pthread_cond_timedwait64 (pthread_cond_t *cond,
                                        pthread_mutex_t *mutex,
                                        const struct __timespec64 *abstime);
-libpthread_hidden_proto (__pthread_cond_timedwait64)
+libc_hidden_proto (__pthread_cond_timedwait64)
 extern int __pthread_cond_clockwait64 (pthread_cond_t *cond,
                                        pthread_mutex_t *mutex,
                                        clockid_t clockid,
                                        const struct __timespec64 *abstime);
-libpthread_hidden_proto (__pthread_cond_clockwait64)
+libc_hidden_proto (__pthread_cond_clockwait64)
 extern int __pthread_rwlock_clockrdlock64 (pthread_rwlock_t *rwlock,
                                            clockid_t clockid,
                                            const struct __timespec64 *abstime);
-libpthread_hidden_proto (__pthread_rwlock_clockrdlock64)
+libc_hidden_proto (__pthread_rwlock_clockrdlock64)
 extern int __pthread_rwlock_clockwrlock64 (pthread_rwlock_t *rwlock,
                                            clockid_t clockid,
                                            const struct __timespec64 *abstime);
-libpthread_hidden_proto (__pthread_rwlock_clockwrlock64)
+libc_hidden_proto (__pthread_rwlock_clockwrlock64)
 extern int __pthread_rwlock_timedrdlock64 (pthread_rwlock_t *rwlock,
                                            const struct __timespec64 *abstime);
-libpthread_hidden_proto (__pthread_rwlock_timedrdlock64)
+libc_hidden_proto (__pthread_rwlock_timedrdlock64)
 extern int __pthread_rwlock_timedwrlock64 (pthread_rwlock_t *rwlock,
                                            const struct __timespec64 *abstime);
-libpthread_hidden_proto (__pthread_rwlock_timedwrlock64)
+libc_hidden_proto (__pthread_rwlock_timedwrlock64)
 extern int __pthread_mutex_clocklock64 (pthread_mutex_t *mutex,
                                         clockid_t clockid,
                                         const struct __timespec64 *abstime);
-libpthread_hidden_proto (__pthread_mutex_clocklock64)
+libc_hidden_proto (__pthread_mutex_clocklock64)
 extern int __pthread_mutex_timedlock64 (pthread_mutex_t *mutex,
                                         const struct __timespec64 *abstime);
-libpthread_hidden_proto (__pthread_mutex_timedlock64)
+libc_hidden_proto (__pthread_mutex_timedlock64)
 #endif
 
 extern int __pthread_cond_timedwait (pthread_cond_t *cond,
 				     pthread_mutex_t *mutex,
 				     const struct timespec *abstime);
+libc_hidden_proto (__pthread_cond_timedwait)
 extern int __pthread_cond_clockwait (pthread_cond_t *cond,
 				     pthread_mutex_t *mutex,
 				     clockid_t clockid,
 				     const struct timespec *abstime)
   __nonnull ((1, 2, 4));
+libc_hidden_proto (__pthread_cond_clockwait)
+
+extern int __pthread_mutex_clocklock (pthread_mutex_t *mutex,
+				      clockid_t clockid,
+				      const struct timespec *abstime);
+libc_hidden_proto (__pthread_mutex_clocklock)
+extern int __pthread_mutex_timedlock (pthread_mutex_t *mutex,
+				      const struct timespec *abstime);
+libc_hidden_proto (__pthread_mutex_timedlock)
+
 extern int __pthread_condattr_destroy (pthread_condattr_t *attr);
 extern int __pthread_condattr_init (pthread_condattr_t *attr);
 extern int __pthread_key_create (pthread_key_t *key, void (*destr) (void *));
+libc_hidden_proto (__pthread_key_create)
 extern int __pthread_key_delete (pthread_key_t key);
+libc_hidden_proto (__pthread_key_delete)
 extern void *__pthread_getspecific (pthread_key_t key);
+libc_hidden_proto (__pthread_getspecific)
 extern int __pthread_setspecific (pthread_key_t key, const void *value);
+libc_hidden_proto (__pthread_setspecific)
 extern int __pthread_once (pthread_once_t *once_control,
 			   void (*init_routine) (void));
+libc_hidden_proto (__pthread_once)
 extern int __pthread_atfork (void (*prepare) (void), void (*parent) (void),
 			     void (*child) (void));
 extern pthread_t __pthread_self (void);
 extern int __pthread_equal (pthread_t thread1, pthread_t thread2);
 extern int __pthread_detach (pthread_t th);
-extern int __pthread_cancel (pthread_t th);
+libc_hidden_proto (__pthread_detach)
 extern int __pthread_kill (pthread_t threadid, int signo);
 extern void __pthread_exit (void *value) __attribute__ ((__noreturn__));
+libc_hidden_proto (__pthread_exit)
 extern int __pthread_join (pthread_t threadid, void **thread_return);
+libc_hidden_proto (__pthread_join)
 extern int __pthread_setcanceltype (int type, int *oldtype);
-extern int __pthread_enable_asynccancel (void) attribute_hidden;
-extern void __pthread_disable_asynccancel (int oldtype) attribute_hidden;
+libc_hidden_proto (__pthread_setcanceltype)
 extern void __pthread_testcancel (void);
+libc_hidden_proto (__pthread_testcancel)
 extern int __pthread_clockjoin_ex (pthread_t, void **, clockid_t,
 				   const struct __timespec64 *, bool)
   attribute_hidden;
@@ -540,22 +538,7 @@ libc_hidden_proto (__pthread_sigmask);
 
 
 #if IS_IN (libpthread)
-hidden_proto (__pthread_mutex_init)
-hidden_proto (__pthread_mutex_destroy)
-hidden_proto (__pthread_mutex_lock)
-hidden_proto (__pthread_mutex_trylock)
-hidden_proto (__pthread_mutex_unlock)
-hidden_proto (__pthread_rwlock_rdlock)
-hidden_proto (__pthread_rwlock_wrlock)
 hidden_proto (__pthread_rwlock_unlock)
-hidden_proto (__pthread_key_create)
-hidden_proto (__pthread_getspecific)
-hidden_proto (__pthread_setspecific)
-hidden_proto (__pthread_once)
-hidden_proto (__pthread_setcancelstate)
-hidden_proto (__pthread_testcancel)
-hidden_proto (__pthread_mutexattr_init)
-hidden_proto (__pthread_mutexattr_settype)
 #endif
 
 extern int __pthread_cond_broadcast_2_0 (pthread_cond_2_0_t *cond);
@@ -583,11 +566,10 @@ libc_hidden_proto (__pthread_attr_setsigmask_internal)
 extern __typeof (pthread_attr_getsigmask_np) __pthread_attr_getsigmask_np;
 libc_hidden_proto (__pthread_attr_getsigmask_np)
 
-#if IS_IN (libpthread)
 /* Special versions which use non-exported functions.  */
 extern void __pthread_cleanup_push (struct _pthread_cleanup_buffer *buffer,
-				    void (*routine) (void *), void *arg)
-     attribute_hidden;
+				    void (*routine) (void *), void *arg);
+libc_hidden_proto (__pthread_cleanup_push)
 
 /* Replace cleanup macros defined in <pthread.h> with internal
    versions that don't depend on unwind info and better support
@@ -598,11 +580,72 @@ extern void __pthread_cleanup_push (struct _pthread_cleanup_buffer *buffer,
   __pthread_cleanup_push (&_buffer, (routine), (arg));
 
 extern void __pthread_cleanup_pop (struct _pthread_cleanup_buffer *buffer,
-				   int execute) attribute_hidden;
+				   int execute);
+libc_hidden_proto (__pthread_cleanup_pop)
 # undef pthread_cleanup_pop
 # define pthread_cleanup_pop(execute)                   \
   __pthread_cleanup_pop (&_buffer, (execute)); }
-#endif
+
+#if defined __EXCEPTIONS && !defined __cplusplus
+/* Structure to hold the cleanup handler information.  */
+struct __pthread_cleanup_combined_frame
+{
+  void (*__cancel_routine) (void *);
+  void *__cancel_arg;
+  int __do_it;
+  struct _pthread_cleanup_buffer __buffer;
+};
+
+/* Special cleanup macros which register cleanup both using
+   __pthread_cleanup_{push,pop} and using cleanup attribute.  This is needed
+   for pthread_once, so that it supports both throwing exceptions from the
+   pthread_once callback (only cleanup attribute works there) and cancellation
+   of the thread running the callback if the callback or some routines it
+   calls don't have unwind information.  */
+
+static __always_inline void
+__pthread_cleanup_combined_routine (struct __pthread_cleanup_combined_frame
+				    *__frame)
+{
+  if (__frame->__do_it)
+    {
+      __frame->__cancel_routine (__frame->__cancel_arg);
+      __frame->__do_it = 0;
+      __pthread_cleanup_pop (&__frame->__buffer, 0);
+    }
+}
+
+static inline void
+__pthread_cleanup_combined_routine_voidptr (void *__arg)
+{
+  struct __pthread_cleanup_combined_frame *__frame
+    = (struct __pthread_cleanup_combined_frame *) __arg;
+  if (__frame->__do_it)
+    {
+      __frame->__cancel_routine (__frame->__cancel_arg);
+      __frame->__do_it = 0;
+    }
+}
+
+# define pthread_cleanup_combined_push(routine, arg) \
+  do {									      \
+    void (*__cancel_routine) (void *) = (routine);			      \
+    struct __pthread_cleanup_combined_frame __clframe			      \
+      __attribute__ ((__cleanup__ (__pthread_cleanup_combined_routine)))      \
+      = { .__cancel_routine = __cancel_routine, .__cancel_arg = (arg),	      \
+	  .__do_it = 1 };						      \
+    __pthread_cleanup_push (&__clframe.__buffer,			      \
+			    __pthread_cleanup_combined_routine_voidptr,	      \
+			    &__clframe);
+
+# define pthread_cleanup_combined_pop(execute) \
+    __pthread_cleanup_pop (&__clframe.__buffer, 0);			      \
+    __clframe.__do_it = 0;						      \
+    if (execute)							      \
+      __cancel_routine (__clframe.__cancel_arg);			      \
+  } while (0)
+
+#endif /* __EXCEPTIONS && !defined __cplusplus */
 
 extern void __pthread_cleanup_push_defer (struct _pthread_cleanup_buffer *buffer,
 					  void (*routine) (void *), void *arg);
@@ -619,17 +662,12 @@ extern void _pthread_cleanup_push_defer (struct _pthread_cleanup_buffer *buffer,
 extern void _pthread_cleanup_pop_restore (struct _pthread_cleanup_buffer *buffer,
 					  int execute);
 
-extern void __nptl_deallocate_tsd (void) attribute_hidden;
+extern void __nptl_deallocate_tsd (void);
+libc_hidden_proto (__nptl_deallocate_tsd)
 
-extern void __nptl_setxid_error (struct xid_command *cmdp, int error)
-  attribute_hidden;
+void __nptl_setxid_sighandler (int sig, siginfo_t *si, void *ctx);
+libc_hidden_proto (__nptl_setxid_sighandler)
 extern int __nptl_setxid (struct xid_command *cmdp) attribute_hidden;
-#ifndef SHARED
-extern void __nptl_set_robust (struct pthread *self);
-#endif
-
-extern void __nptl_stacks_freeres (void) attribute_hidden;
-extern void __shm_directory_freeres (void) attribute_hidden;
 
 extern void __wait_lookup_done (void) attribute_hidden;
 

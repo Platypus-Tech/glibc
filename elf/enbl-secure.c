@@ -19,7 +19,11 @@
 /* This file is used in the static libc.  For the shared library,
    dl-sysdep.c defines and initializes __libc_enable_secure.  */
 
-#include <unistd.h>
+/* Mark symbols hidden in static PIE for early self relocation to work.  */
+#if BUILD_PIE_DEFAULT
+# pragma GCC visibility push(hidden)
+#endif
+#include <startup.h>
 #include <libc-internal.h>
 
 /* If nonzero __libc_enable_secure is already set.  */
@@ -31,6 +35,6 @@ void
 __libc_init_secure (void)
 {
   if (__libc_enable_secure_decided == 0)
-    __libc_enable_secure = (__geteuid () != __getuid ()
-			    || __getegid () != __getgid ());
+    __libc_enable_secure = (startup_geteuid () != startup_getuid ()
+			    || startup_getegid () != startup_getgid ());
 }

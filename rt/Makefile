@@ -39,6 +39,8 @@ librt-routines = $(aio-routines) \
 		 $(timer-routines) \
 		 $(shm-routines) $(mq-routines)
 
+$(librt-routines-var) = \
+
 tests := tst-shm tst-timer tst-timer2 \
 	 tst-aio tst-aio64 tst-aio2 tst-aio3 tst-aio4 tst-aio5 tst-aio6 \
 	 tst-aio7 tst-aio8 tst-aio9 tst-aio10 \
@@ -57,7 +59,6 @@ include ../Rules
 CFLAGS-aio_suspend.c += -fexceptions
 CFLAGS-mq_timedreceive.c += -fexceptions -fasynchronous-unwind-tables
 CFLAGS-mq_timedsend.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-librt-cancellation.c += -fasynchronous-unwind-tables
 
 LDFLAGS-rt.so = -Wl,--enable-new-dtags,-z,nodelete
 

@@ -19,6 +19,12 @@
 /* This file defines some things that for the dynamic linker are defined in
    rtld.c and dl-sysdep.c in ways appropriate to bootstrap dynamic linking.  */
 
+#include <string.h>
+/* Mark symbols hidden in static PIE for early self relocation to work.
+   Note: string.h may have ifuncs which cannot be hidden on i686.  */
+#if BUILD_PIE_DEFAULT
+# pragma GCC visibility push(hidden)
+#endif
 #include <errno.h>
 #include <libintl.h>
 #include <stdlib.h>
@@ -132,9 +138,9 @@ void *_dl_random;
 #include <dl-procruntime.c>
 #include <dl-procinfo.c>
 
-void (*_dl_init_static_tls) (struct link_map *) = &_dl_nothread_init_static_tls;
-
 size_t _dl_pagesize = EXEC_PAGESIZE;
+
+size_t _dl_minsigstacksize = CONSTANT_MINSIGSTKSZ;
 
 int _dl_inhibit_cache;
 
@@ -177,24 +183,27 @@ uint64_t _dl_hwcap_mask __attribute__ ((nocommon));
  * executable but this isn't true for all platforms.  */
 ElfW(Word) _dl_stack_flags = DEFAULT_STACK_PERMS;
 
+#if THREAD_GSCOPE_IN_TCB
+list_t _dl_stack_used;
+list_t _dl_stack_user;
+list_t _dl_stack_cache;
+size_t _dl_stack_cache_actsize;
+uintptr_t _dl_in_flight_stack;
+int _dl_stack_cache_lock;
+#else
 /* If loading a shared object requires that we make the stack executable
    when it was not, we do it by calling this function.
    It returns an errno code or zero on success.  */
 int (*_dl_make_stack_executable_hook) (void **) = _dl_make_stack_executable;
-
-
-#if THREAD_GSCOPE_IN_TCB
-list_t _dl_stack_used;
-list_t _dl_stack_user;
-int _dl_stack_cache_lock;
-#else
 int _dl_thread_gscope_count;
+void (*_dl_init_static_tls) (struct link_map *) = &_dl_nothread_init_static_tls;
 #endif
 struct dl_scope_free_list *_dl_scope_free_list;
 
 #ifdef NEED_DL_SYSINFO
-/* Needed for improved syscall handling on at least x86/Linux.  */
-uintptr_t _dl_sysinfo = DL_SYSINFO_DEFAULT;
+/* Needed for improved syscall handling on at least x86/Linux.  NB: Don't
+   initialize it here to avoid RELATIVE relocation in static PIE.  */
+uintptr_t _dl_sysinfo;
 #endif
 #ifdef NEED_DL_SYSINFO_DSO
 /* Address of the ELF headers in the vsyscall page.  */
@@ -231,6 +240,11 @@ _dl_aux_init (ElfW(auxv_t) *av)
   int seen = 0;
   uid_t uid = 0;
   gid_t gid = 0;
+
+#ifdef NEED_DL_SYSINFO
+  /* NB: Avoid RELATIVE relocation in static PIE.  */
+  GL(dl_sysinfo) = DL_SYSINFO_DEFAULT;
+#endif
 
   _dl_auxv = av;
   for (; av->a_type != AT_NULL; ++av)
@@ -294,6 +308,9 @@ _dl_aux_init (ElfW(auxv_t) *av)
 	break;
       case AT_RANDOM:
 	_dl_random = (void *) av->a_un.a_val;
+	break;
+      case AT_MINSIGSTKSZ:
+	_dl_minsigstacksize = av->a_un.a_val;
 	break;
       DL_PLATFORM_AUXV
       }

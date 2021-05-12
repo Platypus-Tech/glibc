@@ -19,10 +19,10 @@
 #include <errno.h>
 #include "pthreadP.h"
 #include <atomic.h>
-
+#include <shlib-compat.h>
 
 int
-__pthread_detach (pthread_t th)
+___pthread_detach (pthread_t th)
 {
   struct pthread *pd = (struct pthread *) th;
 
@@ -49,8 +49,16 @@ __pthread_detach (pthread_t th)
     if ((pd->cancelhandling & EXITING_BITMASK) != 0)
       /* Note that the code in __free_tcb makes sure each thread
 	 control block is freed only once.  */
-      __free_tcb (pd);
+      __nptl_free_tcb (pd);
 
   return result;
 }
-weak_alias (__pthread_detach, pthread_detach)
+versioned_symbol (libc, ___pthread_detach, pthread_detach, GLIBC_2_34);
+libc_hidden_ver (___pthread_detach, __pthread_detach)
+#ifndef SHARED
+strong_alias (___pthread_detach, __pthread_detach)
+#endif
+
+#if OTHER_SHLIB_COMPAT (libpthread, GLIBC_2_0, GLIBC_2_34)
+compat_symbol (libc, ___pthread_detach, pthread_detach, GLIBC_2_0);
+#endif

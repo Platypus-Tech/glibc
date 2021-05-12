@@ -28,7 +28,7 @@
    once by IFUNC relocation.  In dynamic executable, it is called twice
    by DL_PLATFORM_INIT and by IFUNC relocation.  */
 extern void __x86_cpu_features (void) attribute_hidden;
-const void (*__x86_cpu_features_p) (void) attribute_hidden
+void (*const __x86_cpu_features_p) (void) attribute_hidden
   = __x86_cpu_features;
 
 void
@@ -43,12 +43,10 @@ __ifunc (__x86_cpu_features, __x86_cpu_features, NULL, void,
 	 _dl_x86_init_cpu_features);
 #endif
 
-#undef __x86_get_cpu_features
+#undef _dl_x86_get_cpu_features
 
 const struct cpu_features *
-__x86_get_cpu_features (unsigned int max)
+_dl_x86_get_cpu_features (void)
 {
-  if (max > COMMON_CPUID_INDEX_MAX)
-    return NULL;
   return &GLRO(dl_x86_cpu_features);
 }

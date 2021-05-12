@@ -23,17 +23,28 @@
 #include <lowlevellock.h>
 #include <stap-probe.h>
 #include <futex-internal.h>
-
-#ifndef lll_unlock_elision
-#define lll_unlock_elision(a,b,c) ({ lll_unlock (a,c); 0; })
-#endif
+#include <shlib-compat.h>
 
 static int
 __pthread_mutex_unlock_full (pthread_mutex_t *mutex, int decr)
      __attribute_noinline__;
 
+/* lll_lock with single-thread optimization.  */
+static inline void
+lll_mutex_unlock_optimized (pthread_mutex_t *mutex)
+{
+  /* The single-threaded optimization is only valid for private
+     mutexes.  For process-shared mutexes, the mutex could be in a
+     shared mapping, so synchronization with another process is needed
+     even without any threads.  */
+  int private = PTHREAD_MUTEX_PSHARED (mutex);
+  if (private == LLL_PRIVATE && SINGLE_THREAD_P)
+    mutex->__data.__lock = 0;
+  else
+    lll_unlock (mutex->__data.__lock, private);
+}
+
 int
-attribute_hidden
 __pthread_mutex_unlock_usercnt (pthread_mutex_t *mutex, int decr)
 {
   /* See concurrency notes regarding mutex type which is loaded from __kind
@@ -55,7 +66,7 @@ __pthread_mutex_unlock_usercnt (pthread_mutex_t *mutex, int decr)
 	--mutex->__data.__nusers;
 
       /* Unlock.  */
-      lll_unlock (mutex->__data.__lock, PTHREAD_MUTEX_PSHARED (mutex));
+      lll_mutex_unlock_optimized (mutex);
 
       LIBC_PROBE (mutex_release, 1, mutex);
 
@@ -92,6 +103,7 @@ __pthread_mutex_unlock_usercnt (pthread_mutex_t *mutex, int decr)
       goto normal;
     }
 }
+libc_hidden_def (__pthread_mutex_unlock_usercnt)
 
 
 static int
@@ -352,9 +364,17 @@ __pthread_mutex_unlock_full (pthread_mutex_t *mutex, int decr)
 
 
 int
-__pthread_mutex_unlock (pthread_mutex_t *mutex)
+___pthread_mutex_unlock (pthread_mutex_t *mutex)
 {
   return __pthread_mutex_unlock_usercnt (mutex, 1);
 }
-weak_alias (__pthread_mutex_unlock, pthread_mutex_unlock)
-hidden_def (__pthread_mutex_unlock)
+versioned_symbol (libpthread, ___pthread_mutex_unlock, __pthread_mutex_unlock,
+		  GLIBC_2_34);
+libc_hidden_ver (___pthread_mutex_unlock, __pthread_mutex_unlock)
+versioned_symbol (libpthread, ___pthread_mutex_unlock, pthread_mutex_unlock,
+		  GLIBC_2_0);
+
+#if OTHER_SHLIB_COMPAT (libpthread, GLIBC_2_0, GLIBC_2_34)
+compat_symbol (libpthread, ___pthread_mutex_unlock, __pthread_mutex_unlock,
+	       GLIBC_2_0);
+#endif

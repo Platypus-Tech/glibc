@@ -16,12 +16,16 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-/* If this object is enabled with CET.  */
+/* if this object has GNU property.  */
 enum
   {
-    lc_unknown = 0,			 /* Unknown CET status.  */
-    lc_none = 1 << 0,			 /* Not enabled with CET.  */
-    lc_ibt = 1 << 1,			 /* Enabled with IBT.  */
-    lc_shstk = 1 << 2,			 /* Enabled with STSHK.  */
-    lc_ibt_and_shstk = lc_ibt | lc_shstk /* Enabled with both.  */
-  } l_cet:3;
+    lc_property_unknown = 0,		/* Unknown property status.  */
+    lc_property_none = 1 << 0,		/* No property.  */
+    lc_property_valid = 1 << 1		/* Has valid property.  */
+  } l_property:2;
+
+/* GNU_PROPERTY_X86_FEATURE_1_AND of this object.  */
+unsigned int l_x86_feature_1_and;
+
+/* GNU_PROPERTY_X86_ISA_1_NEEDED of this object.  */
+unsigned int l_x86_isa_1_needed;

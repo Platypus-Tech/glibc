@@ -33,8 +33,7 @@ extern int __euidaccess (const char *__name, int __type);
 extern int __faccessat (int __fd, const char *__file, int __type, int __flag);
 extern int __faccessat_noerrno (int __fd, const char *__file, int __type,
 			        int __flag);
-extern __off64_t __lseek64 (int __fd, __off64_t __offset, int __whence)
-     attribute_hidden;
+extern __off64_t __lseek64 (int __fd, __off64_t __offset, int __whence);
 extern __off_t __lseek (int __fd, __off_t __offset, int __whence);
 libc_hidden_proto (__lseek)
 extern __off_t __libc_lseek (int __fd, __off_t __offset, int __whence);
@@ -48,7 +47,7 @@ extern ssize_t __pread64 (int __fd, void *__buf, size_t __nbytes,
 			  __off64_t __offset);
 libc_hidden_proto (__pread64);
 extern ssize_t __libc_pread64 (int __fd, void *__buf, size_t __nbytes,
-			       __off64_t __offset) attribute_hidden;
+			       __off64_t __offset);
 extern ssize_t __pwrite (int __fd, const void *__buf, size_t __n,
 			 __off_t __offset);
 libc_hidden_proto (__pwrite)
@@ -58,7 +57,7 @@ extern ssize_t __pwrite64 (int __fd, const void *__buf, size_t __n,
 			   __off64_t __offset);
 libc_hidden_proto (__pwrite64)
 extern ssize_t __libc_pwrite64 (int __fd, const void *__buf, size_t __n,
-				__off64_t __offset) attribute_hidden;
+				__off64_t __offset);
 extern ssize_t __libc_read (int __fd, void *__buf, size_t __n);
 libc_hidden_proto (__libc_read)
 libc_hidden_proto (read)
@@ -135,8 +134,8 @@ libc_hidden_proto (__setresuid)
 libc_hidden_proto (__setresgid)
 extern __pid_t __vfork (void);
 libc_hidden_proto (__vfork)
-extern int __ttyname_r (int __fd, char *__buf, size_t __buflen)
-     attribute_hidden;
+extern int __ttyname_r (int __fd, char *__buf, size_t __buflen);
+libc_hidden_proto (__ttyname_r)
 extern int __isatty (int __fd) attribute_hidden;
 extern int __link (const char *__from, const char *__to);
 extern int __symlink (const char *__from, const char *__to);

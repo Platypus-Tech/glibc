@@ -40,6 +40,11 @@
 #define SIGSETXID       (__SIGRTMIN + 1)
 
 
+/* How many signal numbers need to be reserved for libpthread's private uses
+   (SIGCANCEL and SIGSETXID).  */
+#define RESERVED_SIGRT  2
+
+
 /* Return is sig is used internally.  */
 static inline bool
 __is_internal_signal (int sig)
@@ -105,8 +110,4 @@ __libc_signal_restore_set (const sigset_t *set)
   INTERNAL_SYSCALL_CALL (rt_sigprocmask, SIG_SETMASK, set, NULL,
 			 __NSIG_BYTES);
 }
-
-/* Used to communicate with signal handler.  */
-extern struct xid_command *__xidcmd attribute_hidden;
-
 #endif

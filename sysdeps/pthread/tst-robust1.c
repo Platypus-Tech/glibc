@@ -91,7 +91,7 @@ do_test (void)
       puts ("mutexattr_init failed");
       return 1;
     }
-  if (pthread_mutexattr_setrobust_np (&a, PTHREAD_MUTEX_ROBUST_NP) != 0)
+  if (pthread_mutexattr_setrobust (&a, PTHREAD_MUTEX_ROBUST_NP) != 0)
     {
       puts ("mutexattr_setrobust failed");
       return 1;
@@ -241,14 +241,14 @@ do_test (void)
 #endif
 
 #ifndef NOT_CONSISTENT
-      e = pthread_mutex_consistent_np (&m1);
+      e = pthread_mutex_consistent (&m1);
       if (e != 0)
 	{
 	  printf ("%ld: mutex_consistent m1 failed with error %d\n", round, e);
 	  return 1;
 	}
 
-      e = pthread_mutex_consistent_np (&m2);
+      e = pthread_mutex_consistent (&m2);
       if (e != 0)
 	{
 	  printf ("%ld: mutex_consistent m2 failed with error %d\n", round, e);

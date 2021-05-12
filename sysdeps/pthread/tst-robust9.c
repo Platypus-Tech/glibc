@@ -14,10 +14,10 @@ tf (void *data)
   int err = pthread_mutex_lock (&m);
   if (err == EOWNERDEAD)
     {
-      err = pthread_mutex_consistent_np (&m);
+      err = pthread_mutex_consistent (&m);
       if (err)
 	{
-	  puts ("pthread_mutex_consistent_np");
+	  puts ("pthread_mutex_consistent");
 	  exit (1);
 	}
     }
@@ -40,10 +40,10 @@ do_test (void)
   pthread_mutexattr_t ma;
 
   pthread_mutexattr_init (&ma);
-  err = pthread_mutexattr_setrobust_np (&ma, PTHREAD_MUTEX_ROBUST_NP);
+  err = pthread_mutexattr_setrobust (&ma, PTHREAD_MUTEX_ROBUST_NP);
   if (err)
     {
-      puts ("pthread_mutexattr_setrobust_np");
+      puts ("pthread_mutexattr_setrobust");
       return 1;
     }
 #ifdef ENABLE_PI

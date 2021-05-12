@@ -106,8 +106,17 @@ tests += tst-clone tst-clone2 tst-clone3 tst-fanotify tst-personality \
 	 tst-quota tst-sync_file_range tst-sysconf-iov_max tst-ttyname \
 	 test-errno-linux tst-memfd_create tst-mlock2 tst-pkey \
 	 tst-rlimit-infinity tst-ofdlocks tst-gettid tst-gettid-kill \
-	 tst-tgkill tst-sysvsem-linux tst-sysvmsg-linux tst-sysvshm-linux
-tests-internal += tst-ofdlocks-compat tst-sigcontext-get_pc
+	 tst-tgkill tst-sysvsem-linux tst-sysvmsg-linux tst-sysvshm-linux \
+	 tst-timerfd tst-ppoll \
+	 tst-clock_adjtime tst-adjtimex tst-ntp_adjtime tst-ntp_gettime \
+	 tst-ntp_gettimex tst-sigtimedwait
+
+# Test for the symbol version of fcntl that was replaced in glibc 2.28.
+ifeq ($(have-GLIBC_2.27)$(build-shared),yesyes)
+tests += tst-ofdlocks-compat
+endif
+
+tests-internal += tst-sigcontext-get_pc
 
 CFLAGS-tst-sigcontext-get_pc.c = -fasynchronous-unwind-tables
 
@@ -264,15 +273,19 @@ inhibit-glue = yes
 ifeq ($(subdir),dirent)
 sysdep_routines += getdirentries getdirentries64
 tests += tst-getdents64
-tests-internal += tst-readdir64-compat
+
+# The tested readdir64 symbol was replaced in glibc 2.2.
+ifeq ($(have-GLIBC_2.1.3)$(build-shared),yesyes)
+tests += tst-readdir64-compat
 endif
+endif # $(subdir) == dirent
 
 ifeq ($(subdir),nis)
 CFLAGS-ypclnt.c = -DUSE_BINDINGDIR=1
 endif
 
 ifeq ($(subdir),io)
-sysdep_routines += xstatconv internal_statvfs internal_statvfs64 \
+sysdep_routines += xstatconv internal_statvfs \
 		   sync_file_range fallocate fallocate64 \
 		   close_nocancel fcntl_nocancel \
 		   open_nocancel open64_nocancel \

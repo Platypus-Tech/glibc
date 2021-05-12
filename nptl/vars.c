@@ -22,19 +22,11 @@
 
 /* Default thread attributes for the case when the user does not
    provide any.  */
-union pthread_attr_transparent __default_pthread_attr attribute_hidden;
+union pthread_attr_transparent __default_pthread_attr
+  __attribute__ ((nocommon));
+libc_hidden_data_def (__default_pthread_attr)
 
 /* Mutex protecting __default_pthread_attr.  */
-int __default_pthread_attr_lock = LLL_LOCK_INITIALIZER;
-
-#ifndef TLS_MULTIPLE_THREADS_IN_TCB
-/* Variable set to a nonzero value either if more than one thread runs or ran,
-   or if a single-threaded process is trying to cancel itself.  See
-   nptl/descr.h for more context on the single-threaded process case.  */
-int __pthread_multiple_threads attribute_hidden;
-#endif
-
-/* Table of the key information.  */
-struct pthread_key_struct __pthread_keys[PTHREAD_KEYS_MAX]
-  __attribute__ ((nocommon));
-hidden_data_def (__pthread_keys)
+int __default_pthread_attr_lock __attribute__ ((nocommon))
+  = LLL_LOCK_INITIALIZER;
+libc_hidden_data_def (__default_pthread_attr_lock)

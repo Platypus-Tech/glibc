@@ -26,8 +26,13 @@
 # define DB_RTLD_VARIABLE(name) DB_VARIABLE (name)
 #endif
 
+/* DB_MAIN_VARIABLE and DB_MAIN_ARRAY_VARIABLE are not covered by the
+   libpthread symbol check in db-symbols.awk.  */
 #ifndef DB_MAIN_VARIABLE
 # define DB_MAIN_VARIABLE(name) DB_VARIABLE (name)
+#endif
+#ifndef DB_MAIN_ARRAY_VARIABLE
+# define DB_MAIN_ARRAY_VARIABLE(name) DB_ARRAY_VARIABLE (name)
 #endif
 
 #ifndef DB_RTLD_GLOBAL_FIELD
@@ -73,11 +78,11 @@ DB_SYMBOL (nptl_version)
 DB_FUNCTION (__nptl_create_event)
 DB_FUNCTION (__nptl_death_event)
 DB_SYMBOL (__nptl_threads_events)
-DB_VARIABLE (__nptl_nthreads)
+DB_MAIN_VARIABLE (__nptl_nthreads)
 DB_VARIABLE (__nptl_last_event)
 DB_VARIABLE (__nptl_initial_report_events)
 
-DB_ARRAY_VARIABLE (__pthread_keys)
+DB_MAIN_ARRAY_VARIABLE (__pthread_keys)
 DB_STRUCT (pthread_key_struct)
 DB_STRUCT_FIELD (pthread_key_struct, seq)
 DB_STRUCT_FIELD (pthread_key_struct, destr)
@@ -100,8 +105,7 @@ DB_STRUCT_FIELD (pthread, dtvp)
 #endif
 
 #if !(IS_IN (libpthread) && !defined SHARED)
-DB_STRUCT (rtld_global)
-DB_RTLD_VARIABLE (_rtld_global)
+DB_VARIABLE (__nptl_rtld_global)
 #endif
 DB_RTLD_GLOBAL_FIELD (dl_tls_dtv_slotinfo_list)
 DB_RTLD_GLOBAL_FIELD (dl_stack_user)

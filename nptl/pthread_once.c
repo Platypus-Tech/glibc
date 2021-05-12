@@ -19,7 +19,8 @@
 #include "pthreadP.h"
 #include <futex-internal.h>
 #include <atomic.h>
-
+#include <libc-lockP.h>
+#include <shlib-compat.h>
 
 unsigned long int __fork_generation attribute_hidden;
 
@@ -111,11 +112,11 @@ __pthread_once_slow (pthread_once_t *once_control, void (*init_routine) (void))
       /* This thread is the first here.  Do the initialization.
 	 Register a cleanup handler so that in case the thread gets
 	 interrupted the initialization can be restarted.  */
-      pthread_cleanup_push (clear_once_control, once_control);
+      pthread_cleanup_combined_push (clear_once_control, once_control);
 
       init_routine ();
 
-      pthread_cleanup_pop (0);
+      pthread_cleanup_combined_pop (0);
 
 
       /* Mark *once_control as having finished the initialization.  We need
@@ -132,7 +133,7 @@ __pthread_once_slow (pthread_once_t *once_control, void (*init_routine) (void))
 }
 
 int
-__pthread_once (pthread_once_t *once_control, void (*init_routine) (void))
+___pthread_once (pthread_once_t *once_control, void (*init_routine) (void))
 {
   /* Fast path.  See __pthread_once_slow.  */
   int val;
@@ -142,5 +143,13 @@ __pthread_once (pthread_once_t *once_control, void (*init_routine) (void))
   else
     return __pthread_once_slow (once_control, init_routine);
 }
-weak_alias (__pthread_once, pthread_once)
-hidden_def (__pthread_once)
+libc_hidden_ver (___pthread_once, __pthread_once)
+#ifndef SHARED
+strong_alias (___pthread_once, __pthread_once)
+#endif
+
+versioned_symbol (libc, ___pthread_once, pthread_once, GLIBC_2_34);
+#if OTHER_SHLIB_COMPAT (libpthread, GLIBC_2_0, GLIBC_2_34)
+compat_symbol (libpthread, ___pthread_once, __pthread_once, GLIBC_2_0);
+compat_symbol (libpthread, ___pthread_once, pthread_once, GLIBC_2_0);
+#endif

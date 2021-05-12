@@ -30,6 +30,7 @@ struct mutex_config __mutex_aconf =
   calling into kernel to block.  */
   .spin_count = DEFAULT_ADAPTIVE_COUNT,
 };
+libc_hidden_data_def (__mutex_aconf)
 
 static void
 TUNABLE_CALLBACK (set_mutex_spin_count) (tunable_val_t *valp)

@@ -747,7 +747,8 @@ write_output (int fd)
   header->valstrlen = valstrlen;
 
   size_t filled_dbs = 0;
-  struct iovec iov[2 + ndatabases * 3];
+  size_t iov_nelts = 2 + ndatabases * 3;
+  struct iovec iov[iov_nelts];
   iov[0].iov_base = header;
   iov[0].iov_len = file_offset;
 
@@ -791,11 +792,23 @@ write_output (int fd)
 			  + nhashentries_total * sizeof (stridx_t)));
   header->allocate = file_offset;
 
-  if (writev (fd, iov, 2 + ndatabases * 3) != keydataoffset)
+#if __GNUC_PREREQ (10, 0) && !__GNUC_PREREQ (11, 0)
+  DIAG_PUSH_NEEDS_COMMENT;
+  /* Avoid GCC 10 false positive warning: specified size exceeds maximum
+     object size.  */
+  DIAG_IGNORE_NEEDS_COMMENT (10, "-Wstringop-overflow");
+#endif
+
+  assert (iov_nelts <= INT_MAX);
+  if (writev (fd, iov, iov_nelts) != keydataoffset)
     {
       error (0, errno, gettext ("failed to write new database file"));
       return EXIT_FAILURE;
     }
+
+#if __GNUC_PREREQ (10, 0) && !__GNUC_PREREQ (11, 0)
+  DIAG_POP_NEEDS_COMMENT;
+#endif
 
   return EXIT_SUCCESS;
 }

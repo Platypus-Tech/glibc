@@ -29,18 +29,14 @@
 #include <tls.h>
 #include <malloc/malloc-internal.h>
 #include <nss/nss_database.h>
+#include <unwind-link.h>
+#include <register-atfork.h>
 
 #undef __fork
 
 
 /* Things that want to be locked while forking.  */
 symbol_set_declare (_hurd_fork_locks)
-
-
-/* Application callbacks registered through pthread_atfork.  */
-DEFINE_HOOK (_hurd_atfork_prepare_hook, (void));
-DEFINE_HOOK (_hurd_atfork_child_hook, (void));
-DEFINE_HOOK (_hurd_atfork_parent_hook, (void));
 
 /* Things that want to be called before we fork, to prepare the parent for
    task_create, when the new child task will inherit our address space.  */
@@ -71,9 +67,10 @@ __fork (void)
   struct hurd_sigstate *volatile ss;
   struct nss_database_data nss_database_data;
 
-  RUN_HOOK (_hurd_atfork_prepare_hook, ());
+  __run_fork_handlers (atfork_run_prepare, true);
 
   ss = _hurd_self_sigstate ();
+retry:
   __spin_lock (&ss->critical_section_lock);
 
 #undef	LOSE
@@ -667,6 +664,8 @@ __fork (void)
       __sigemptyset (&_hurd_global_sigstate->pending);
       __sigemptyset (&ss->pending);
 
+      __libc_unwind_link_after_fork ();
+
       /* Release malloc locks.  */
       _hurd_malloc_fork_child ();
       call_function_static_weak (__malloc_fork_unlock_child);
@@ -720,13 +719,14 @@ __fork (void)
   }
 
   _hurd_critical_section_unlock (ss);
+  if (err == EINTR)
+    /* Got a signal while inside an RPC of the critical section, retry again */
+    goto retry;
 
   if (!err)
     {
-      if (pid != 0)
-	RUN_HOOK (_hurd_atfork_parent_hook, ());
-      else
-	RUN_HOOK (_hurd_atfork_child_hook, ());
+      __run_fork_handlers (pid == 0 ? atfork_run_child : atfork_run_parent,
+			   true);
     }
 
   return err ? __hurd_fail (err) : pid;

@@ -59,6 +59,7 @@ libsupport-routines = \
   support_format_hostent \
   support_format_netent \
   support_isolate_in_subprocess \
+  support_path_support_time64 \
   support_process_state \
   support_ptrace \
   support_openpty \
@@ -67,9 +68,12 @@ libsupport-routines = \
   support_quote_string \
   support_record_failure \
   support_run_diff \
+  support_select_modifies_timeout \
+  support_select_normalizes_timeout \
   support_set_small_thread_stack_size \
   support_shared_allocate \
   support_small_stack_thread_attribute \
+  support_stat_nanoseconds \
   support_subprocess \
   support_test_compare_blob \
   support_test_compare_failure \
@@ -87,14 +91,18 @@ libsupport-routines = \
   xasprintf \
   xbind \
   xcalloc \
+  xchdir \
   xchroot \
   xclock_gettime \
+  xclock_settime \
   xclose \
+  xchmod \
   xconnect \
   xcopy_file_range \
   xdlfcn \
   xdlmopen \
   xdup2 \
+  xfchmod \
   xfclose \
   xfopen \
   xfork \
@@ -136,6 +144,7 @@ libsupport-routines = \
   xpthread_join \
   xpthread_key_create \
   xpthread_key_delete \
+  xpthread_kill \
   xpthread_mutex_consistent \
   xpthread_mutex_destroy \
   xpthread_mutex_init \

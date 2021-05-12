@@ -168,6 +168,7 @@ TUNABLE_CALLBACK (set_hwcaps) (tunable_val_t *valp)
 	      CHECK_GLIBC_IFUNC_CPU_OFF (n, cpu_features, MOVBE, 5);
 	      CHECK_GLIBC_IFUNC_CPU_OFF (n, cpu_features, SHSTK, 5);
 	      CHECK_GLIBC_IFUNC_CPU_OFF (n, cpu_features, SSSE3, 5);
+	      CHECK_GLIBC_IFUNC_CPU_OFF (n, cpu_features, XSAVE, 5);
 	    }
 	  break;
 	case 6:
@@ -238,6 +239,8 @@ TUNABLE_CALLBACK (set_hwcaps) (tunable_val_t *valp)
 	      CHECK_GLIBC_IFUNC_PREFERRED_BOTH (n, cpu_features,
 						Fast_Copy_Backward,
 						disable, 18);
+	      CHECK_GLIBC_IFUNC_PREFERRED_NEED_BOTH
+		(n, cpu_features, Prefer_AVX2_STRCMP, AVX2, disable, 18);
 	    }
 	  break;
 	case 19:

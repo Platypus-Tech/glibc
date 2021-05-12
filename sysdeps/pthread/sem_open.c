@@ -16,128 +16,25 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include <errno.h>
 #include <fcntl.h>
-#include <pthread.h>
-#include <search.h>
 #include <semaphore.h>
 #include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <sys/stat.h>
 #include "semaphoreP.h"
 #include <shm-directory.h>
+#include <sem_routines.h>
 #include <futex-internal.h>
 #include <libc-lock.h>
 
-/* Comparison function for search of existing mapping.  */
-int
-attribute_hidden
-__sem_search (const void *a, const void *b)
-{
-  const struct inuse_sem *as = (const struct inuse_sem *) a;
-  const struct inuse_sem *bs = (const struct inuse_sem *) b;
-
-  if (as->ino != bs->ino)
-    /* Cannot return the difference the type is larger than int.  */
-    return as->ino < bs->ino ? -1 : (as->ino == bs->ino ? 0 : 1);
-
-  if (as->dev != bs->dev)
-    /* Cannot return the difference the type is larger than int.  */
-    return as->dev < bs->dev ? -1 : (as->dev == bs->dev ? 0 : 1);
-
-  return strcmp (as->name, bs->name);
-}
-
-
-/* The search tree for existing mappings.  */
-void *__sem_mappings attribute_hidden;
-
-/* Lock to protect the search tree.  */
-int __sem_mappings_lock attribute_hidden = LLL_LOCK_INITIALIZER;
-
-
-/* Search for existing mapping and if possible add the one provided.  */
-static sem_t *
-check_add_mapping (const char *name, size_t namelen, int fd, sem_t *existing)
-{
-  sem_t *result = SEM_FAILED;
-
-  /* Get the information about the file.  */
-  struct stat64 st;
-  if (__fstat64 (fd, &st) == 0)
-    {
-      /* Get the lock.  */
-      lll_lock (__sem_mappings_lock, LLL_PRIVATE);
-
-      /* Search for an existing mapping given the information we have.  */
-      struct inuse_sem *fake;
-      fake = (struct inuse_sem *) alloca (sizeof (*fake) + namelen);
-      memcpy (fake->name, name, namelen);
-      fake->dev = st.st_dev;
-      fake->ino = st.st_ino;
-
-      struct inuse_sem **foundp = __tfind (fake, &__sem_mappings,
-					   __sem_search);
-      if (foundp != NULL)
-	{
-	  /* There is already a mapping.  Use it.  */
-	  result = (*foundp)->sem;
-	  ++(*foundp)->refcnt;
-	}
-      else
-	{
-	  /* We haven't found a mapping.  Install ione.  */
-	  struct inuse_sem *newp;
-
-	  newp = (struct inuse_sem *) malloc (sizeof (*newp) + namelen);
-	  if (newp != NULL)
-	    {
-	      /* If the caller hasn't provided any map it now.  */
-	      if (existing == SEM_FAILED)
-		existing = (sem_t *) mmap (NULL, sizeof (sem_t),
-					   PROT_READ | PROT_WRITE, MAP_SHARED,
-					   fd, 0);
-
-	      newp->dev = st.st_dev;
-	      newp->ino = st.st_ino;
-	      newp->refcnt = 1;
-	      newp->sem = existing;
-	      memcpy (newp->name, name, namelen);
-
-	      /* Insert the new value.  */
-	      if (existing != MAP_FAILED
-		  && __tsearch (newp, &__sem_mappings, __sem_search) != NULL)
-		/* Successful.  */
-		result = existing;
-	      else
-		/* Something went wrong while inserting the new
-		   value.  We fail completely.  */
-		free (newp);
-	    }
-	}
-
-      /* Release the lock.  */
-      lll_unlock (__sem_mappings_lock, LLL_PRIVATE);
-    }
-
-  if (result != existing && existing != SEM_FAILED && existing != MAP_FAILED)
-    {
-      /* Do not disturb errno.  */
-      int save = errno;
-      munmap (existing, sizeof (sem_t));
-      errno = save;
-    }
-
-  return result;
-}
-
+#if !PTHREAD_IN_LIBC
+/* The private names are not exported from libc.  */
+# define __link link
+# define __unlink unlink
+#endif
 
 sem_t *
-sem_open (const char *name, int oflag, ...)
+__sem_open (const char *name, int oflag, ...)
 {
   int fd;
   sem_t *result;
@@ -150,8 +47,12 @@ sem_open (const char *name, int oflag, ...)
       return SEM_FAILED;
     }
 
-  /* Create the name of the final file in local variable SHM_NAME.  */
-  SHM_GET_NAME (EINVAL, SEM_FAILED, SEM_SHM_PREFIX);
+  struct shmdir_name dirname;
+  if (__shm_get_name (&dirname, name, true) != 0)
+    {
+      __set_errno (EINVAL);
+      return SEM_FAILED;
+    }
 
   /* Disable asynchronous cancellation.  */
 #ifdef __libc_ptf_call
@@ -164,8 +65,8 @@ sem_open (const char *name, int oflag, ...)
   if ((oflag & O_CREAT) == 0 || (oflag & O_EXCL) == 0)
     {
     try_again:
-      fd = __libc_open (shm_name,
-			(oflag & ~(O_CREAT|O_ACCMODE)) | O_NOFOLLOW | O_RDWR);
+      fd = __open (dirname.name,
+		   (oflag & ~(O_CREAT|O_ACCMODE)) | O_NOFOLLOW | O_RDWR);
 
       if (fd == -1)
 	{
@@ -178,13 +79,12 @@ sem_open (const char *name, int oflag, ...)
       else
 	/* Check whether we already have this semaphore mapped and
 	   create one if necessary.  */
-	result = check_add_mapping (name, namelen, fd, SEM_FAILED);
+	result = __sem_check_add_mapping (name, fd, SEM_FAILED);
     }
   else
     {
       /* We have to open a temporary file first since it must have the
 	 correct form before we can start using it.  */
-      char *tmpfname;
       mode_t mode;
       unsigned int value;
       va_list ap;
@@ -217,16 +117,11 @@ sem_open (const char *name, int oflag, ...)
       memset ((char *) &sem.initsem + sizeof (struct new_sem), '\0',
 	      sizeof (sem_t) - sizeof (struct new_sem));
 
-      tmpfname = __alloca (shm_dirlen + sizeof SEM_SHM_PREFIX + 6);
-      char *xxxxxx = __mempcpy (tmpfname, shm_dir, shm_dirlen);
-
+      char tmpfname[] = SHMDIR "sem.XXXXXX";
       int retries = 0;
 #define NRETRIES 50
       while (1)
 	{
-	  /* Add the suffix for mktemp.  */
-	  strcpy (xxxxxx, "XXXXXX");
-
 	  /* We really want to use mktemp here.  We cannot use mkstemp
 	     since the file must be opened with a specific mode.  The
 	     mode cannot later be set since then we cannot apply the
@@ -238,13 +133,18 @@ sem_open (const char *name, int oflag, ...)
 	    }
 
 	  /* Open the file.  Make sure we do not overwrite anything.  */
-	  fd = __libc_open (tmpfname, O_RDWR | O_CREAT | O_EXCL, mode);
+	  fd = __open (tmpfname, O_RDWR | O_CREAT | O_EXCL, mode);
 	  if (fd == -1)
 	    {
 	      if (errno == EEXIST)
 		{
 		  if (++retries < NRETRIES)
-		    continue;
+		    {
+		      /* Restore the six placeholder bytes before the
+			 null terminator before the next attempt.  */
+		      memcpy (tmpfname + sizeof (tmpfname) - 7, "XXXXXX", 6);
+		      continue;
+		    }
 
 		  __set_errno (EAGAIN);
 		}
@@ -257,18 +157,18 @@ sem_open (const char *name, int oflag, ...)
 	  break;
 	}
 
-      if (TEMP_FAILURE_RETRY (__libc_write (fd, &sem.initsem, sizeof (sem_t)))
+      if (TEMP_FAILURE_RETRY (write (fd, &sem.initsem, sizeof (sem_t)))
 	  == sizeof (sem_t)
 	  /* Map the sem_t structure from the file.  */
-	  && (result = (sem_t *) mmap (NULL, sizeof (sem_t),
-				       PROT_READ | PROT_WRITE, MAP_SHARED,
-				       fd, 0)) != MAP_FAILED)
+	  && (result = (sem_t *) __mmap (NULL, sizeof (sem_t),
+					 PROT_READ | PROT_WRITE, MAP_SHARED,
+					 fd, 0)) != MAP_FAILED)
 	{
 	  /* Create the file.  Don't overwrite an existing file.  */
-	  if (link (tmpfname, shm_name) != 0)
+	  if (__link (tmpfname, dirname.name) != 0)
 	    {
 	      /* Undo the mapping.  */
-	      (void) munmap (result, sizeof (sem_t));
+	      __munmap (result, sizeof (sem_t));
 
 	      /* Reinitialize 'result'.  */
 	      result = SEM_FAILED;
@@ -278,10 +178,10 @@ sem_open (const char *name, int oflag, ...)
 	      if ((oflag & O_EXCL) == 0 && errno == EEXIST)
 		{
 		  /* Remove the file.  */
-		  (void) unlink (tmpfname);
+		  __unlink (tmpfname);
 
 		  /* Close the file.  */
-		  (void) __libc_close (fd);
+		  __close (fd);
 
 		  goto try_again;
 		}
@@ -290,12 +190,12 @@ sem_open (const char *name, int oflag, ...)
 	    /* Insert the mapping into the search tree.  This also
 	       determines whether another thread sneaked by and already
 	       added such a mapping despite the fact that we created it.  */
-	    result = check_add_mapping (name, namelen, fd, result);
+	    result = __sem_check_add_mapping (name, fd, result);
 	}
 
       /* Now remove the temporary name.  This should never fail.  If
 	 it fails we leak a file name.  Better fix the kernel.  */
-      (void) unlink (tmpfname);
+      __unlink (tmpfname);
     }
 
   /* Map the mmap error to the error we need.  */
@@ -307,7 +207,7 @@ sem_open (const char *name, int oflag, ...)
     {
       /* Do not disturb errno.  */
       int save = errno;
-      __libc_close (fd);
+      __close (fd);
       errno = save;
     }
 
@@ -318,3 +218,11 @@ out:
 
   return result;
 }
+#if PTHREAD_IN_LIBC
+versioned_symbol (libc, __sem_open, sem_open, GLIBC_2_34);
+# if OTHER_SHLIB_COMPAT (libpthread, GLIBC_2_1_1, GLIBC_2_34)
+compat_symbol (libpthread, __sem_open, sem_open, GLIBC_2_1_1);
+# endif
+#else /* !PTHREAD_IN_LIBC */
+strong_alias (__sem_open, sem_open)
+#endif

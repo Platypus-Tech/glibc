@@ -131,8 +131,7 @@ libpthread-routines := pt-attr pt-attr-destroy pt-attr-getdetachstate	    \
 	sem_close sem-destroy sem-getvalue sem-init sem_open		    \
 	sem-post sem-timedwait sem-trywait sem_unlink			    \
 	sem-wait sem-waitfast						    \
-									    \
-	shm-directory							    \
+	sem_routines							    \
 									    \
 	cancellation							    \
 	cthreads-compat							    \
@@ -166,7 +165,7 @@ headers :=				\
 
 distribute :=
 
-routines := forward libc_pthread_init alloca_cutoff register-atfork pt-atfork
+routines := forward libc_pthread_init alloca_cutoff pt-atfork
 shared-only-routines = forward
 static-only-routines = pt-atfork
 

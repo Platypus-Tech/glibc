@@ -45,6 +45,9 @@ long xsysconf (int name);
 long long xlseek (int fd, long long offset, int whence);
 void xftruncate (int fd, long long length);
 void xsymlink (const char *target, const char *linkpath);
+void xchdir (const char *path);
+void xfchmod (int fd, mode_t mode);
+void xchmod (const char *pathname, mode_t mode);
 
 /* Equivalent of "mkdir -p".  */
 void xmkdirp (const char *, mode_t);

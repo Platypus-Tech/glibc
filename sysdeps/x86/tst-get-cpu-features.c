@@ -1,4 +1,4 @@
-/* Test case for __x86_get_cpu_features interface
+/* Test case for <sys/platform/x86.h> interface
    Copyright (C) 2015-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
@@ -33,36 +33,9 @@
       printf ("  " #name "\n");		\
   }
 
-static const char * const cpu_kinds[] =
-{
-  "Unknown",
-  "Intel",
-  "AMD",
-  "ZHAOXIN",
-  "Other",
-};
-
 static int
 do_test (void)
 {
-  const struct cpu_features *cpu_features = __x86_get_cpu_features (0);
-
-  switch (cpu_features->basic.kind)
-    {
-    case arch_kind_intel:
-    case arch_kind_amd:
-    case arch_kind_zhaoxin:
-    case arch_kind_other:
-      printf ("Vendor: %s\n", cpu_kinds[cpu_features->basic.kind]);
-      printf ("Family: 0x%x\n", cpu_features->basic.family);
-      printf ("Model: 0x%x\n", cpu_features->basic.model);
-      printf ("Stepping: 0x%x\n", cpu_features->basic.stepping);
-      break;
-
-    default:
-      abort ();
-    }
-
 #ifdef __SSE2__
   TEST_VERIFY_EXIT (HAS_CPU_FEATURE (SSE2));
 #endif
@@ -230,6 +203,7 @@ do_test (void)
   CHECK_CPU_FEATURE (LAM);
   CHECK_CPU_FEATURE (AESKLE);
   CHECK_CPU_FEATURE (WIDE_KL);
+  CHECK_CPU_FEATURE (PTWRITE);
 
   printf ("Usable CPU features:\n");
   CHECK_CPU_FEATURE_USABLE (SSE3);
@@ -328,6 +302,7 @@ do_test (void)
   CHECK_CPU_FEATURE_USABLE (OSPKE);
   CHECK_CPU_FEATURE_USABLE (WAITPKG);
   CHECK_CPU_FEATURE_USABLE (AVX512_VBMI2);
+  CHECK_CPU_FEATURE_USABLE (SHSTK);
   CHECK_CPU_FEATURE_USABLE (GFNI);
   CHECK_CPU_FEATURE_USABLE (VAES);
   CHECK_CPU_FEATURE_USABLE (VPCLMULQDQ);
@@ -351,6 +326,7 @@ do_test (void)
   CHECK_CPU_FEATURE_USABLE (HYBRID);
   CHECK_CPU_FEATURE_USABLE (TSXLDTRK);
   CHECK_CPU_FEATURE_USABLE (PCONFIG);
+  CHECK_CPU_FEATURE_USABLE (IBT);
   CHECK_CPU_FEATURE_USABLE (AMX_BF16);
   CHECK_CPU_FEATURE_USABLE (AVX512_FP16);
   CHECK_CPU_FEATURE_USABLE (AMX_TILE);
@@ -389,6 +365,7 @@ do_test (void)
   CHECK_CPU_FEATURE_USABLE (FSRCS);
   CHECK_CPU_FEATURE_USABLE (AESKLE);
   CHECK_CPU_FEATURE_USABLE (WIDE_KL);
+  CHECK_CPU_FEATURE_USABLE (PTWRITE);
 
   return 0;
 }

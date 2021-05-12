@@ -30,148 +30,194 @@ extra-libs-others := $(extra-libs)
 
 routines = \
   alloca_cutoff \
-  forward \
-  libc-cancellation \
+  cancellation \
+  cleanup \
+  cleanup_compat \
+  cleanup_defer \
+  cleanup_defer_compat \
+  cleanup_routine \
+  elision-conf \
+  elision-lock \
+  elision-timed \
+  elision-trylock \
+  elision-unlock \
+  futex-internal \
   libc-cleanup \
-  libc-lowlevellock \
   libc_multiple_threads \
   libc_pthread_init \
+  lowlevellock \
+  nptl-stack \
+  nptl_deallocate_tsd \
+  nptl_free_tcb \
+  nptl_nthreads \
+  nptl_setxid \
+  nptlfreeres \
+  old_pthread_atfork \
+  old_pthread_cond_broadcast \
   old_pthread_cond_destroy \
   old_pthread_cond_init \
+  old_pthread_cond_signal \
+  old_pthread_cond_timedwait \
+  old_pthread_cond_wait \
   pthread_atfork \
   pthread_attr_copy \
   pthread_attr_destroy \
   pthread_attr_extension \
+  pthread_attr_getaffinity \
   pthread_attr_getdetachstate \
+  pthread_attr_getguardsize \
   pthread_attr_getinheritsched \
   pthread_attr_getschedparam \
   pthread_attr_getschedpolicy \
   pthread_attr_getscope \
   pthread_attr_getsigmask \
+  pthread_attr_getstack \
+  pthread_attr_getstackaddr \
+  pthread_attr_getstacksize \
   pthread_attr_init \
   pthread_attr_setaffinity \
   pthread_attr_setdetachstate \
+  pthread_attr_setguardsize \
   pthread_attr_setinheritsched \
   pthread_attr_setschedparam \
   pthread_attr_setschedpolicy \
   pthread_attr_setscope \
   pthread_attr_setsigmask \
   pthread_attr_setsigmask_internal \
+  pthread_attr_setstack \
+  pthread_attr_setstackaddr \
+  pthread_attr_setstacksize \
+  pthread_barrier_destroy \
+  pthread_barrier_init \
+  pthread_barrier_wait \
+  pthread_barrierattr_destroy \
+  pthread_barrierattr_getpshared \
+  pthread_barrierattr_init \
+  pthread_barrierattr_setpshared \
+  pthread_cancel \
+  pthread_cleanup_upto \
+  pthread_clockjoin \
+  pthread_cond_broadcast \
   pthread_cond_destroy \
   pthread_cond_init \
+  pthread_cond_signal \
+  pthread_cond_wait \
   pthread_condattr_destroy \
+  pthread_condattr_getclock \
+  pthread_condattr_getpshared \
   pthread_condattr_init \
+  pthread_condattr_setclock \
+  pthread_condattr_setpshared \
+  pthread_detach \
   pthread_equal \
+  pthread_exit \
   pthread_getaffinity \
   pthread_getattr_np \
+  pthread_getconcurrency \
   pthread_getschedparam \
+  pthread_getspecific \
+  pthread_join \
+  pthread_join_common \
+  pthread_key_create \
+  pthread_key_delete \
+  pthread_keys \
+  pthread_kill \
+  pthread_kill_other_threads \
+  pthread_mutex_cond_lock \
+  pthread_mutex_conf \
+  pthread_mutex_consistent \
+  pthread_mutex_destroy \
+  pthread_mutex_getprioceiling \
+  pthread_mutex_init \
+  pthread_mutex_lock \
+  pthread_mutex_setprioceiling \
+  pthread_mutex_timedlock \
+  pthread_mutex_trylock \
+  pthread_mutex_unlock \
+  pthread_mutexattr_destroy \
+  pthread_mutexattr_getprioceiling \
+  pthread_mutexattr_getprotocol \
+  pthread_mutexattr_getpshared \
+  pthread_mutexattr_getrobust \
+  pthread_mutexattr_gettype \
+  pthread_mutexattr_init \
+  pthread_mutexattr_setprioceiling \
+  pthread_mutexattr_setprotocol \
+  pthread_mutexattr_setpshared \
+  pthread_mutexattr_setrobust \
+  pthread_mutexattr_settype \
+  pthread_once \
+  pthread_rwlock_clockrdlock \
+  pthread_rwlock_clockwrlock \
+  pthread_rwlock_destroy \
+  pthread_rwlock_init \
+  pthread_rwlock_rdlock \
+  pthread_rwlock_timedrdlock \
+  pthread_rwlock_timedwrlock \
+  pthread_rwlock_tryrdlock \
+  pthread_rwlock_trywrlock \
+  pthread_rwlock_unlock \
+  pthread_rwlock_wrlock \
+  pthread_rwlockattr_destroy \
+  pthread_rwlockattr_getkind_np \
+  pthread_rwlockattr_getpshared \
+  pthread_rwlockattr_init \
+  pthread_rwlockattr_setkind_np \
+  pthread_rwlockattr_setpshared \
   pthread_self \
+  pthread_setattr_default_np \
+  pthread_setcancelstate \
+  pthread_setcanceltype \
+  pthread_setconcurrency \
   pthread_setschedparam \
+  pthread_setspecific \
   pthread_sigmask \
-  register-atfork \
+  pthread_spin_destroy \
+  pthread_spin_init \
+  pthread_spin_lock \
+  pthread_spin_trylock \
+  pthread_spin_unlock \
+  pthread_testcancel \
+  pthread_timedjoin \
+  pthread_tryjoin \
+  pthread_yield \
+  sem_clockwait \
+  sem_close \
+  sem_destroy \
+  sem_getvalue \
+  sem_init \
+  sem_open \
+  sem_post \
+  sem_routines \
+  sem_timedwait \
+  sem_unlink \
+  sem_wait \
+  tpp \
+  unwind \
+  vars \
 
 shared-only-routines = forward
 static-only-routines = pthread_atfork
 
-# We need to provide certain routines for compatibility with existing
-# binaries.
-pthread-compat-wrappers = \
-		      write read close accept \
-		      connect recv recvfrom send \
-		      sendto fsync lseek lseek64 \
-		      msync open open64 pause \
-		      pread pread64 pwrite pwrite64 \
-		      tcdrain msgrcv msgsnd \
-		      sigwait sigsuspend \
-		      recvmsg sendmsg
+libpthread-routines = \
+  events \
+  libpthread-compat \
+  nptl-init \
+  pt-interp \
+  pthread_create \
+  pthread_getattr_default_np \
+  pthread_getcpuclockid \
+  pthread_getname \
+  pthread_setaffinity \
+  pthread_setname \
+  pthread_setschedprio \
+  pthread_sigqueue \
+  version \
 
-libpthread-routines = nptl-init nptlfreeres vars events version pt-interp \
-		      pthread_create pthread_exit pthread_detach \
-		      pthread_join pthread_tryjoin pthread_timedjoin \
-		      pthread_clockjoin pthread_join_common pthread_yield \
-		      pthread_getconcurrency pthread_setconcurrency \
-		      pthread_setschedprio \
-		      pthread_attr_getguardsize pthread_attr_setguardsize \
-		      pthread_attr_getstackaddr pthread_attr_setstackaddr \
-		      pthread_attr_getstacksize pthread_attr_setstacksize \
-		      pthread_attr_getstack pthread_attr_setstack \
-		      pthread_mutex_init pthread_mutex_destroy \
-		      pthread_mutex_lock pthread_mutex_trylock \
-		      pthread_mutex_timedlock pthread_mutex_unlock \
-		      pthread_mutex_cond_lock \
-		      pthread_mutexattr_init pthread_mutexattr_destroy \
-		      pthread_mutexattr_getpshared \
-		      pthread_mutexattr_setpshared \
-		      pthread_mutexattr_gettype pthread_mutexattr_settype \
-		      pthread_rwlock_init pthread_rwlock_destroy \
-		      pthread_rwlock_rdlock pthread_rwlock_timedrdlock \
-		      pthread_rwlock_clockrdlock \
-		      pthread_rwlock_wrlock pthread_rwlock_timedwrlock \
-		      pthread_rwlock_clockwrlock \
-		      pthread_rwlock_tryrdlock pthread_rwlock_trywrlock \
-		      pthread_rwlock_unlock \
-		      pthread_rwlockattr_init pthread_rwlockattr_destroy \
-		      pthread_rwlockattr_getpshared \
-		      pthread_rwlockattr_setpshared \
-		      pthread_rwlockattr_getkind_np \
-		      pthread_rwlockattr_setkind_np \
-		      pthread_cond_wait \
-		      pthread_cond_signal pthread_cond_broadcast \
-		      old_pthread_cond_wait old_pthread_cond_timedwait \
-		      old_pthread_cond_signal old_pthread_cond_broadcast \
-		      pthread_condattr_getpshared pthread_condattr_setpshared \
-		      pthread_condattr_getclock pthread_condattr_setclock \
-		      pthread_spin_init pthread_spin_destroy \
-		      pthread_spin_lock pthread_spin_trylock \
-		      pthread_spin_unlock \
-		      pthread_barrier_init pthread_barrier_destroy \
-		      pthread_barrier_wait \
-		      pthread_barrierattr_init pthread_barrierattr_destroy \
-		      pthread_barrierattr_getpshared \
-		      pthread_barrierattr_setpshared \
-		      pthread_key_create pthread_key_delete \
-		      pthread_getspecific pthread_setspecific \
-		      pthread_kill pthread_sigqueue \
-		      pthread_cancel pthread_testcancel \
-		      pthread_setcancelstate pthread_setcanceltype \
-		      pthread_once \
-		      old_pthread_atfork \
-		      pthread_getcpuclockid \
-		      shm-directory \
-		      sem_init sem_destroy \
-		      sem_open sem_close sem_unlink \
-		      sem_getvalue \
-		      sem_wait sem_timedwait sem_clockwait sem_post \
-		      cleanup cleanup_defer cleanup_compat \
-		      cleanup_defer_compat unwind \
-		      pt-longjmp pt-cleanup\
-		      cancellation \
-		      lowlevellock \
-		      pt-fork pt-fcntl \
-		      $(pthread-compat-wrappers) \
-		      pt-raise pt-system \
-		      flockfile ftrylockfile funlockfile \
-		      sigaction \
-		      herrno res pt-allocrtsig \
-		      pthread_kill_other_threads \
-		      pthread_setaffinity \
-		      pthread_attr_getaffinity \
-		      pthread_mutexattr_getrobust pthread_mutexattr_setrobust \
-		      pthread_mutex_consistent \
-		      cleanup_routine unwind-forcedunwind \
-		      pthread_mutexattr_getprotocol \
-		      pthread_mutexattr_setprotocol \
-		      pthread_mutexattr_getprioceiling \
-		      pthread_mutexattr_setprioceiling tpp \
-		      pthread_mutex_getprioceiling \
-		      pthread_mutex_setprioceiling \
-		      pthread_setname pthread_getname \
-		      pthread_setattr_default_np pthread_getattr_default_np \
-		      pthread_mutex_conf \
-		      libpthread-compat
-
-libpthread-shared-only-routines = version pt-interp pt-allocrtsig \
-				  unwind-forcedunwind
+libpthread-shared-only-routines = \
+  pt-allocrtsig \
+  pt-interp \
+  version \
 
 # Since cancellation handling is in large parts handled using exceptions
 # we have to compile some files with exception handling enabled, some
@@ -191,7 +237,6 @@ CFLAGS-pthread_setcanceltype.c += -fexceptions -fasynchronous-unwind-tables
 # These are internal functions which similar functionality as setcancelstate
 # and setcanceltype.
 CFLAGS-cancellation.c += -fasynchronous-unwind-tables
-CFLAGS-libc-cancellation.c += -fasynchronous-unwind-tables
 
 # Calling pthread_exit() must cause the registered cancel handlers to
 # be executed.  Therefore exceptions have to be thrown through this
@@ -216,38 +261,7 @@ CFLAGS-sem_wait.c += -fexceptions -fasynchronous-unwind-tables
 CFLAGS-sem_timedwait.c += -fexceptions -fasynchronous-unwind-tables
 CFLAGS-sem_clockwait.c = -fexceptions -fasynchronous-unwind-tables
 
-# These are the function wrappers we have to duplicate here.
-CFLAGS-fcntl.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-fcntl64.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-lockf.c += -fexceptions
-CFLAGS-pread.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-pread64.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-pwrite.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-pwrite64.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-sigwait.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-msgrcv.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-msgsnd.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-tcdrain.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-open.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-open64.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-pause.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-recv.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-send.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-accept.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-sendto.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-connect.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-recvfrom.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-recvmsg.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-sendmsg.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-close.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-read.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-write.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-sigsuspend.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-msync.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-fdatasync.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-fsync.c += -fexceptions -fasynchronous-unwind-tables
-
-CFLAGS-pt-system.c += -fexceptions
+CFLAGS-futex-internal.c += -fexceptions -fasynchronous-unwind-tables
 
 LDLIBS-tst-once5 = -lstdc++
 CFLAGS-tst-thread_local1.o = -std=gnu++11
@@ -274,7 +288,6 @@ tests = tst-attr2 tst-attr3 tst-default-attr \
 	tst-tsd3 tst-tsd4 \
 	tst-cancel4_1 tst-cancel4_2 \
 	tst-cancel7 tst-cancel17 tst-cancel24 \
-	tst-cleanup4 \
 	tst-signal3 \
 	tst-exec4 tst-exec5 \
 	tst-stack2 tst-stack3 tst-stack4 \
@@ -294,7 +307,15 @@ tests = tst-attr2 tst-attr3 tst-default-attr \
 	tst-thread-affinity-sched \
 	tst-pthread-defaultattr-free \
 	tst-pthread-attr-sigmask \
-	tst-pthread-timedlock-lockloop
+	tst-pthread-timedlock-lockloop \
+	tst-pthread-gdb-attach tst-pthread-gdb-attach-static \
+	tst-pthread_exit-nothreads \
+	tst-pthread_exit-nothreads-static \
+	tst-thread-setspecific
+
+tests-nolibpthread = \
+  tst-pthread_exit-nothreads \
+  tst-pthread_exit-nothreads-static \
 
 tests-container =  tst-pthread-getattr
 
@@ -313,10 +334,6 @@ xtests = tst-setuid1 tst-setuid1-static tst-setuid2 \
 xtests += tst-eintr1
 
 test-srcs = tst-oddstacklimit
-
-# Test expected to fail on most targets (except x86_64) due to bug
-# 18435 - pthread_once hangs when init routine throws an exception.
-test-xfail-tst-once5 = yes
 
 gen-as-const-headers = unwindbuf.sym \
 		       pthread-pi-defines.sym
@@ -344,6 +361,22 @@ CPPFLAGS-test-cond-printers.c := $(CFLAGS-printers-tests)
 CPPFLAGS-test-rwlockattr-printers.c := $(CFLAGS-printers-tests)
 CPPFLAGS-test-rwlock-printers.c := $(CFLAGS-printers-tests)
 
+# Reuse the CFLAGS setting for the GDB attaching test.  It needs
+# debugging information.
+CFLAGS-tst-pthread-gdb-attach.c := $(CFLAGS-printers-tests)
+CPPFLAGS-tst-pthread-gdb-attach.c := $(CFLAGS-printers-tests)
+ifeq ($(build-shared)$(build-hardcoded-path-in-tests),yesno)
+CPPFLAGS-tst-pthread-gdb-attach.c += -DDO_ADD_SYMBOL_FILE=1
+else
+CPPFLAGS-tst-pthread-gdb-attach.c += -DDO_ADD_SYMBOL_FILE=0
+endif
+CFLAGS-tst-pthread-gdb-attach-static.c := $(CFLAGS-printers-tests)
+CPPFLAGS-tst-pthread-gdb-attach-static.c := \
+  $(CFLAGS-printers-tests) -DDO_ADD_SYMBOL_FILE=0
+# As of version 9.2, GDB cannot attach properly to PIE programs that
+# were launched with an explicit ld.so invocation.
+tst-pthread-gdb-attach-no-pie = yes
+
 ifeq ($(build-shared),yes)
 tests-printers-libs := $(shared-thread-library)
 else
@@ -352,7 +385,7 @@ endif
 
 LDFLAGS-pthread.so = -Wl,--enable-new-dtags,-z,nodelete,-z,initfirst
 
-tests += tst-cancelx7 tst-cancelx17 tst-cleanupx4
+tests += tst-cancelx7 tst-cancelx17
 
 ifeq ($(build-shared),yes)
 tests += tst-compat-forwarder tst-audit-threads
@@ -371,6 +404,14 @@ modules-names = tst-tls3mod \
 extra-test-objs += $(addsuffix .os,$(strip $(modules-names))) \
 		   tst-cleanup4aux.o tst-cleanupx4aux.o
 test-extras += tst-cleanup4aux tst-cleanupx4aux
+
+# This test exercises compat symbols removed in glibc 2.34.
+ifdef have-GLIBC_2.33
+tests += tst-cleanup4
+ifeq ($(build-shared),yes)
+tests += tst-cleanupx4
+endif
+endif
 
 tst-tls3mod.so-no-z-defs = yes
 tst-tls5mod.so-no-z-defs = yes
@@ -405,7 +446,6 @@ extra-objs += $(crti-objs) $(crtn-objs)
 extra-objs += pt-crti.o
 endif
 
-CFLAGS-flockfile.c += $(libio-mtsafe)
 CFLAGS-ftrylockfile.c += $(libio-mtsafe)
 CFLAGS-funlockfile.c += $(libio-mtsafe)
 
@@ -415,7 +455,9 @@ link-libc-static := $(common-objpfx)libc.a $(static-gnulib) \
 tests-static += tst-stackguard1-static \
 		tst-cancel24-static \
 		tst-mutex8-static tst-mutexpi8-static tst-sem11-static \
-		tst-sem12-static tst-cond11-static
+		tst-sem12-static tst-cond11-static \
+		tst-pthread-gdb-attach-static \
+		tst-pthread_exit-nothreads-static
 
 tests += tst-cancel24-static
 

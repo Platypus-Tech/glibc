@@ -20,8 +20,6 @@
 
 #include <config.h>
 
-#ifdef HAVE_GCC_IFUNC
-
 # include <stdbool.h>
 # include <stdio.h>
 
@@ -43,6 +41,7 @@ implementation (void)
 }
 
 static __typeof__ (implementation) *
+inhibit_stack_protector
 resolver (void)
 {
   ++resolver_called;
@@ -91,17 +90,3 @@ main (void)
 
   return errors;
 }
-
-#else  /* !HAVE_GCC_IFUNC */
-
-# include <support/check.h>
-
-static int
-do_test (void)
-{
-  FAIL_UNSUPPORTED ("GCC does not support the ifunc attribute");
-  return 1;                     /* Not reachable.  */
-}
-
-# include <support/test-driver.c>
-#endif

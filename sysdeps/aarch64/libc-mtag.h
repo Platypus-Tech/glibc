@@ -35,22 +35,34 @@
 #define __MTAG_MMAP_FLAGS PROT_MTE
 
 /* Set the tags for a region of memory, which must have size and alignment
-   that are multiples of __MTAG_GRANULE_SIZE.  Size cannot be zero.
-   void *__libc_mtag_tag_region (const void *, size_t)  */
+   that are multiples of __MTAG_GRANULE_SIZE.  Size cannot be zero.  */
 void *__libc_mtag_tag_region (void *, size_t);
 
-/* Optimized equivalent to __libc_mtag_tag_region followed by memset.  */
-void *__libc_mtag_memset_with_tag (void *, int, size_t);
+/* Optimized equivalent to __libc_mtag_tag_region followed by memset to 0.  */
+void *__libc_mtag_tag_zero_region (void *, size_t);
 
 /* Convert address P to a pointer that is tagged correctly for that
-   location.
-   void *__libc_mtag_address_get_tag (void*)  */
-void *__libc_mtag_address_get_tag (void *);
+   location.  */
+static __always_inline void *
+__libc_mtag_address_get_tag (void *p)
+{
+  register void *x0 asm ("x0") = p;
+  asm (".inst 0xd9600000 /* ldg x0, [x0] */" : "+r" (x0));
+  return x0;
+}
 
 /* Assign a new (random) tag to a pointer P (does not adjust the tag on
-   the memory addressed).
-   void *__libc_mtag_new_tag (void*)  */
-void *__libc_mtag_new_tag (void *);
+   the memory addressed).  */
+static __always_inline void *
+__libc_mtag_new_tag (void *p)
+{
+  register void *x0 asm ("x0") = p;
+  register unsigned long x1 asm ("x1");
+  /* Guarantee that the new tag is not the same as now.  */
+  asm (".inst 0x9adf1401 /* gmi x1, x0, xzr */\n"
+       ".inst 0x9ac11000 /* irg x0, x0, x1 */" : "+r" (x0), "=r" (x1));
+  return x0;
+}
 
 #endif /* USE_MTAG */
 

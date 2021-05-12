@@ -35,7 +35,7 @@ dl-routines	= $(addprefix dl-,load lookup object reloc deps \
 				  execstack open close trampoline \
 				  exception sort-maps lookup-direct \
 				  call-libc-early-init write \
-				  thread_gscope_wait)
+				  thread_gscope_wait tls_init_tp)
 ifeq (yes,$(use-ldconfig))
 dl-routines += dl-cache
 endif
@@ -44,6 +44,10 @@ ifneq (no,$(have-tunables))
 dl-routines += dl-tunables
 tunables-type = $(addprefix TUNABLES_FRONTEND_,$(have-tunables))
 CPPFLAGS-dl-tunables.c += -DTUNABLES_FRONTEND=$(tunables-type)
+
+ifeq (yesyes,$(build-shared)$(run-built-tests))
+tests-special += $(objpfx)list-tunables.out
+endif
 
 # Make sure that the compiler does not insert any library calls in tunables
 # code paths.
@@ -62,12 +66,13 @@ elide-routines.os = $(all-dl-routines) dl-support enbl-secure dl-origin \
 # interpreter and operating independent of libc.
 rtld-routines	= rtld $(all-dl-routines) dl-sysdep dl-environ dl-minimal \
   dl-error-minimal dl-conflict dl-hwcaps dl-hwcaps_split dl-hwcaps-subdirs \
-  dl-usage
+  dl-usage dl-diagnostics dl-diagnostics-kernel dl-diagnostics-cpu \
+  dl-mutex
 all-rtld-routines = $(rtld-routines) $(sysdep-rtld-routines)
 
 CFLAGS-dl-runtime.c += -fexceptions -fasynchronous-unwind-tables
 CFLAGS-dl-lookup.c += -fexceptions -fasynchronous-unwind-tables
-CFLAGS-dl-iterate-phdr.c += $(uses-callbacks)
+CFLAGS-dl-iteratephdr.c += $(uses-callbacks)
 
 # On targets without __builtin_memset, rtld.c uses a hand-coded loop
 # in _dl_start.  Make sure this isn't turned into a call to regular memset.
@@ -78,10 +83,6 @@ endif
 # Compile rtld itself without stack protection.
 # Also compile all routines in the static library that are elided from
 # the shared libc because they are in libc.a in the same way.
-
-define elide-stack-protector
-$(if $(filter $(@F),$(patsubst %,%$(1),$(2))), $(no-stack-protector))
-endef
 
 CFLAGS-.o += $(call elide-stack-protector,.o,$(elide-routines.os))
 CFLAGS-.op += $(call elide-stack-protector,.op,$(elide-routines.os))
@@ -160,7 +161,8 @@ tests-static-normal := tst-leaks1-static tst-array1-static tst-array5-static \
 	       tst-dl-iter-static \
 	       tst-tlsalign-static tst-tlsalign-extern-static \
 	       tst-linkall-static tst-env-setuid tst-env-setuid-tunables \
-	       tst-single_threaded-static tst-single_threaded-pthread-static
+	       tst-single_threaded-static tst-single_threaded-pthread-static \
+	       tst-dst-static
 
 tests-static-internal := tst-tls1-static tst-tls2-static \
 	       tst-ptrguard1-static tst-stackguard1-static \
@@ -221,7 +223,8 @@ tests += restest1 preloadtest loadfail multiload origtest resolvfail \
 	 tst-audit14 tst-audit15 tst-audit16 \
 	 tst-single_threaded tst-single_threaded-pthread \
 	 tst-tls-ie tst-tls-ie-dlmopen argv0test \
-	 tst-glibc-hwcaps tst-glibc-hwcaps-prepend tst-glibc-hwcaps-mask
+	 tst-glibc-hwcaps tst-glibc-hwcaps-prepend tst-glibc-hwcaps-mask \
+	 tst-tls20 tst-tls21 tst-dlmopen-dlerror
 #	 reldep9
 tests-internal += loadtest unload unload2 circleload1 \
 	 neededtest neededtest2 neededtest3 neededtest4 \
@@ -240,7 +243,7 @@ tests += $(tests-execstack-$(have-z-execstack))
 ifeq ($(run-built-tests),yes)
 tests-special += $(objpfx)tst-leaks1-mem.out \
 		 $(objpfx)tst-leaks1-static-mem.out $(objpfx)noload-mem.out \
-		 $(objpfx)tst-ldconfig-X.out
+		 $(objpfx)tst-ldconfig-X.out $(objpfx)tst-rtld-help.out
 endif
 tlsmod17a-suffixes = 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19
 tlsmod18a-suffixes = 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19
@@ -343,6 +346,7 @@ modules-names = testobj1 testobj2 testobj3 testobj4 testobj5 testobj6 \
 		libmarkermod2-1 libmarkermod2-2 \
 		libmarkermod3-1 libmarkermod3-2 libmarkermod3-3 \
 		libmarkermod4-1 libmarkermod4-2 libmarkermod4-3 libmarkermod4-4 \
+		tst-tls20mod-bad tst-tls21mod tst-dlmopen-dlerror-mod \
 
 # Most modules build with _ISOMAC defined, but those filtered out
 # depend on internal headers.
@@ -394,8 +398,10 @@ tests-ifuncstatic := ifuncmain1static ifuncmain1picstatic \
 		ifuncmain2static ifuncmain2picstatic \
 		ifuncmain4static ifuncmain4picstatic \
 		ifuncmain5static ifuncmain5picstatic \
-		ifuncmain7static ifuncmain7picstatic \
-		ifuncmain9static ifuncmain9picstatic
+		ifuncmain7static ifuncmain7picstatic
+ifeq (yes,$(have-gcc-ifunc))
+tests-ifuncstatic += ifuncmain9static ifuncmain9picstatic
+endif
 tests-static += $(tests-ifuncstatic)
 tests-internal += $(tests-ifuncstatic)
 ifeq (yes,$(build-shared))
@@ -406,15 +412,20 @@ tests-internal += \
 	 ifuncmain1staticpic \
 	 ifuncmain2 ifuncmain2pic ifuncmain3 ifuncmain4 \
 	 ifuncmain5 ifuncmain5pic ifuncmain5staticpic \
-	 ifuncmain7 ifuncmain7pic \
-	 ifuncmain9 ifuncmain9pic
+	 ifuncmain7 ifuncmain7pic
+ifeq (yes,$(have-gcc-ifunc))
+tests-internal += ifuncmain9 ifuncmain9pic
+endif
 ifunc-test-modules = ifuncdep1 ifuncdep1pic ifuncdep2 ifuncdep2pic \
 		     ifuncdep5 ifuncdep5pic
 extra-test-objs += $(ifunc-test-modules:=.o)
 test-internal-extras += $(ifunc-test-modules)
 ifeq (yes,$(have-fpie))
 ifunc-pie-tests = ifuncmain1pie ifuncmain1vispie ifuncmain1staticpie \
-		  ifuncmain5pie ifuncmain6pie ifuncmain7pie ifuncmain9pie
+		  ifuncmain5pie ifuncmain6pie ifuncmain7pie
+ifeq (yes,$(have-gcc-ifunc))
+ifunc-pie-tests += ifuncmain9pie
+endif
 ifeq (yes,$(have-textrel_ifunc))
 ifunc-pie-tests += tst-ifunc-textrel
 endif
@@ -428,7 +439,8 @@ endif
 ifeq (yes,$(build-shared))
 ifeq ($(run-built-tests),yes)
 tests-special += $(objpfx)tst-pathopt.out $(objpfx)tst-rtld-load-self.out \
-		 $(objpfx)tst-rtld-preload.out $(objpfx)argv0test.out
+		 $(objpfx)tst-rtld-preload.out $(objpfx)argv0test.out \
+		 $(objpfx)tst-rtld-help.out
 endif
 tests-special += $(objpfx)check-textrel.out $(objpfx)check-execstack.out \
 		 $(objpfx)check-wx-segment.out \
@@ -453,12 +465,10 @@ update-all-abi: update-all-abi-ld
 
 ifeq ($(have-glob-dat-reloc),yes)
 tests += tst-prelink
+tests-internal += tst-prelink-cmp
 # Don't compile tst-prelink.c with PIE for GLOB_DAT relocation.
 CFLAGS-tst-prelink.c += -fno-pie
 tst-prelink-no-pie = yes
-ifeq ($(run-built-tests),yes)
-tests-special += $(objpfx)tst-prelink-cmp.out
-endif
 endif
 
 # The test requires shared _and_ PIE because the executable
@@ -519,14 +529,14 @@ $(objpfx)dl-allobjs.os: $(all-rtld-routines:%=$(objpfx)%.os)
 # discovery mechanism is not compatible with the libc implementation
 # when compiled for libc.
 rtld-stubbed-symbols = \
+  __GI___pthread_disable_asynccancel \
+  __GI___pthread_enable_asynccancel \
+  __pthread_disable_asynccancel \
+  __pthread_enable_asynccancel \
   calloc \
   free \
   malloc \
   realloc \
-
-# The GCC arguments that implement $(rtld-stubbed-symbols).
-rtld-stubbed-symbols-args = \
-  $(patsubst %,-Wl$(comma)--defsym=%=0, $(rtld-stubbed-symbols))
 
 ifeq ($(have-ssp),yes)
 # rtld is not built with the stack protector, so these references will
@@ -536,9 +546,12 @@ endif
 
 $(objpfx)librtld.map: $(objpfx)dl-allobjs.os $(common-objpfx)libc_pic.a
 	@-rm -f $@T
-	$(reloc-link) -o $@.o $(rtld-stubbed-symbols-args) \
-		'-Wl,-(' $^ -lgcc '-Wl,-)' -Wl,-Map,$@T
-	rm -f $@.o
+	for symbol in $(rtld-stubbed-symbols); do \
+		echo ".globl $$symbol"; \
+		echo "$$symbol:"; \
+	done | $(CC) -o $@T.o $(ASFLAGS) -c -x assembler -
+	$(reloc-link) -o $@.o $@T.o '-Wl,-(' $^ -lgcc '-Wl,-)' -Wl,-Map,$@T
+	rm -f %@T.o $@.o
 	mv -f $@T $@
 
 # For lld, skip preceding addresses and values before matching the archive and the member.
@@ -675,6 +688,9 @@ CFLAGS-dl-cache.c += $(SYSCONF-FLAGS)
 CFLAGS-cache.c += $(SYSCONF-FLAGS)
 CFLAGS-rtld.c += $(SYSCONF-FLAGS)
 CFLAGS-dl-usage.c += $(SYSCONF-FLAGS) \
+  -D'RTLD="$(rtlddir)/$(rtld-installed-name)"'
+CFLAGS-dl-diagnostics.c += $(SYSCONF-FLAGS) \
+  -D'PREFIX="$(prefix)"' \
   -D'RTLD="$(rtlddir)/$(rtld-installed-name)"'
 
 cpp-srcs-left := $(all-rtld-routines:=.os)
@@ -1403,6 +1419,8 @@ CFLAGS-ifuncmain7pie.c += $(pie-ccflag)
 CFLAGS-ifuncmain9pie.c += $(pie-ccflag)
 CFLAGS-tst-ifunc-textrel.c += $(pic-ccflag)
 
+LDFLAGS-ifuncmain6pie = -Wl,-z,lazy
+
 $(objpfx)ifuncmain1pie: $(objpfx)ifuncmod1.so
 $(objpfx)ifuncmain1staticpie: $(objpfx)ifuncdep1pic.o
 $(objpfx)ifuncmain1vispie: $(objpfx)ifuncmod1.so
@@ -1574,6 +1592,10 @@ $(objpfx)tst-sonamemove-dlopen.out: \
   $(objpfx)tst-sonamemove-runmod1.so \
   $(objpfx)tst-sonamemove-runmod2.so
 
+$(objpfx)tst-dlmopen-dlerror: $(libdl)
+$(objpfx)tst-dlmopen-dlerror-mod.so: $(libdl) $(libsupport)
+$(objpfx)tst-dlmopen-dlerror.out: $(objpfx)tst-dlmopen-dlerror-mod.so
+
 # Override -z defs, so that we can reference an undefined symbol.
 # Force lazy binding for the same reason.
 LDFLAGS-tst-latepthreadmod.so = \
@@ -1599,10 +1621,7 @@ tst-prelink-ENV = LD_TRACE_PRELINKING=1
 $(objpfx)tst-prelink-conflict.out: $(objpfx)tst-prelink.out
 	grep stdout $< | grep conflict | $(AWK) '{ print $$10, $$11 }' > $@
 
-$(objpfx)tst-prelink-cmp.out: tst-prelink.exp \
-			      $(objpfx)tst-prelink-conflict.out
-	cmp $^ > $@; \
-	$(evaluate-test)
+$(objpfx)tst-prelink-cmp.out: $(objpfx)tst-prelink-conflict.out
 
 $(objpfx)tst-ldconfig-X.out : tst-ldconfig-X.sh $(objpfx)ldconfig
 	$(SHELL) $< '$(common-objpfx)' '$(test-wrapper-env)' \
@@ -1652,8 +1671,6 @@ $(objpfx)tst-nodelete-dlclose.out: $(objpfx)tst-nodelete-dlclose-dso.so \
 
 tst-env-setuid-ENV = MALLOC_CHECK_=2 MALLOC_MMAP_THRESHOLD_=4096 \
 		     LD_HWCAP_MASK=0x1
-tst-env-setuid-tunables-ENV = \
-	GLIBC_TUNABLES=glibc.malloc.check=2:glibc.malloc.mmap_threshold=4096
 
 $(objpfx)tst-debug1: $(libdl)
 $(objpfx)tst-debug1.out: $(objpfx)tst-debug1mod1.so
@@ -1894,3 +1911,36 @@ $(objpfx)tst-glibc-hwcaps-mask.out: \
 # Generic dependency for sysdeps implementation of
 # tst-glibc-hwcaps-cache.
 $(objpfx)tst-glibc-hwcaps-cache.out: $(objpfx)tst-glibc-hwcaps
+
+$(objpfx)list-tunables.out: tst-rtld-list-tunables.sh $(objpfx)ld.so
+	$(SHELL) $< $(objpfx)ld.so '$(test-wrapper-env)' \
+	    '$(run_program_env)' > $(objpfx)/tst-rtld-list-tunables.out
+	cmp tst-rtld-list-tunables.exp \
+	    $(objpfx)/tst-rtld-list-tunables.out > $@; \
+	$(evaluate-test)
+
+tst-dst-static-ENV = LD_LIBRARY_PATH='$$ORIGIN'
+
+$(objpfx)tst-rtld-help.out: $(objpfx)ld.so
+	$(test-wrapper) $(rtld-prefix) --help > $@; \
+	status=$$?; \
+	echo "info: ld.so exit status: $$status" >> $@; \
+	if ! grep -q 'Legacy HWCAP subdirectories under library search path directories' $@; then \
+	  echo "error: missing subdirectory pattern" >> $@; \
+	  if test $$status -eq 0; then \
+	    status=1; \
+	  fi; \
+	fi; \
+	(exit $$status); \
+	$(evaluate-test)
+
+# Reuses tst-tls-many-dynamic-modules
+tst-tls20mod-bad.so-no-z-defs = yes
+$(objpfx)tst-tls20: $(libdl) $(shared-thread-library)
+$(objpfx)tst-tls20.out: $(objpfx)tst-tls20mod-bad.so \
+			$(tst-tls-many-dynamic-modules:%=$(objpfx)%.so)
+
+# Reuses tst-tls-many-dynamic-modules
+$(objpfx)tst-tls21: $(libdl) $(shared-thread-library)
+$(objpfx)tst-tls21.out: $(objpfx)tst-tls21mod.so
+$(objpfx)tst-tls21mod.so: $(tst-tls-many-dynamic-modules:%=$(objpfx)%.so)

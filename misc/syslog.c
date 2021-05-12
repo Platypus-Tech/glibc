@@ -62,7 +62,7 @@ static char sccsid[] = "@(#)syslog.c	8.4 (Berkeley) 3/18/94";
 
 static int	LogType = SOCK_DGRAM;	/* type of socket connection */
 static int	LogFile = -1;		/* fd for log */
-static int	connected;		/* have done connect */
+static bool	connected;		/* have done connect */
 static int	LogStat;		/* status bits, set by openlog() */
 static const char *LogTag;		/* string to tag the entry with */
 static int	LogFacility = LOG_USER;	/* default facility code */
@@ -74,13 +74,6 @@ __libc_lock_define_initialized (static, syslog_lock)
 
 static void openlog_internal(const char *, int, int);
 static void closelog_internal(void);
-#ifndef NO_SIGPIPE
-static void sigpipe_handler (int);
-#endif
-
-#ifndef send_flags
-# define send_flags 0
-#endif
 
 struct cleanup_arg
 {
@@ -95,15 +88,8 @@ cancel_handler (void *ptr)
   struct cleanup_arg *clarg = (struct cleanup_arg *) ptr;
 
   if (clarg != NULL)
-    {
-#ifndef NO_SIGPIPE
-      if (clarg->oldaction != NULL)
-	__sigaction (SIGPIPE, clarg->oldaction, NULL);
-#endif
-
-      /* Free the memstream buffer,  */
-      free (clarg->buf);
-    }
+    /* Free the memstream buffer,  */
+    free (clarg->buf);
 
   /* Free the lock.  */
   __libc_lock_unlock (syslog_lock);
@@ -160,10 +146,6 @@ __vsyslog_internal(int pri, const char *fmt, va_list ap,
 	char *buf = 0;
 	size_t bufsize = 0;
 	size_t msgoff;
-#ifndef NO_SIGPIPE
- 	struct sigaction action, oldaction;
- 	int sigpipe;
-#endif
 	int saved_errno = errno;
 	char failbuf[3 * sizeof (pid_t) + sizeof "out of memory []"];
 
@@ -273,36 +255,26 @@ __vsyslog_internal(int pri, const char *fmt, va_list ap,
 		(void)__writev(STDERR_FILENO, iov, v - iov + 1);
 	}
 
-#ifndef NO_SIGPIPE
-	/* Prepare for a broken connection.  */
- 	memset (&action, 0, sizeof (action));
- 	action.sa_handler = sigpipe_handler;
- 	sigemptyset (&action.sa_mask);
- 	sigpipe = __sigaction (SIGPIPE, &action, &oldaction);
-	if (sigpipe == 0)
-	  clarg.oldaction = &oldaction;
-#endif
-
 	/* Get connected, output the message to the local logger. */
 	if (!connected)
-		openlog_internal(LogTag, LogStat | LOG_NDELAY, 0);
+		openlog_internal(NULL, LogStat | LOG_NDELAY, LogFacility);
 
 	/* If we have a SOCK_STREAM connection, also send ASCII NUL as
 	   a record terminator.  */
 	if (LogType == SOCK_STREAM)
 	  ++bufsize;
 
-	if (!connected || __send(LogFile, buf, bufsize, send_flags) < 0)
+	if (!connected || __send(LogFile, buf, bufsize, MSG_NOSIGNAL) < 0)
 	  {
 	    if (connected)
 	      {
 		/* Try to reopen the syslog connection.  Maybe it went
 		   down.  */
 		closelog_internal ();
-		openlog_internal(LogTag, LogStat | LOG_NDELAY, 0);
+		openlog_internal(NULL, LogStat | LOG_NDELAY, LogFacility);
 	      }
 
-	    if (!connected || __send(LogFile, buf, bufsize, send_flags) < 0)
+	    if (!connected || __send(LogFile, buf, bufsize, MSG_NOSIGNAL) < 0)
 	      {
 		closelog_internal ();	/* attempt re-open next time */
 		/*
@@ -312,18 +284,14 @@ __vsyslog_internal(int pri, const char *fmt, va_list ap,
 		 * syslogd failure.
 		 */
 		if (LogStat & LOG_CONS &&
-		    (fd = __open(_PATH_CONSOLE, O_WRONLY|O_NOCTTY, 0)) >= 0)
+		    (fd = __open(_PATH_CONSOLE, O_WRONLY|O_NOCTTY|O_CLOEXEC,
+				 0)) >= 0)
 		  {
 		    __dprintf (fd, "%s\r\n", buf + msgoff);
 		    (void)__close(fd);
 		  }
 	      }
 	  }
-
-#ifndef NO_SIGPIPE
-	if (sigpipe == 0)
-		__sigaction (SIGPIPE, &oldaction, (struct sigaction *) NULL);
-#endif
 
  out:
 	/* End of critical section.  */
@@ -334,8 +302,12 @@ __vsyslog_internal(int pri, const char *fmt, va_list ap,
 		free (buf);
 }
 
-static struct sockaddr_un SyslogAddr;	/* AF_UNIX address of local logger */
-
+/* AF_UNIX address of local logger  */
+static const struct sockaddr_un SyslogAddr =
+  {
+    .sun_family = AF_UNIX,
+    .sun_path = _PATH_LOG
+  };
 
 static void
 openlog_internal(const char *ident, int logstat, int logfac)
@@ -343,15 +315,12 @@ openlog_internal(const char *ident, int logstat, int logfac)
 	if (ident != NULL)
 		LogTag = ident;
 	LogStat = logstat;
-	if (logfac != 0 && (logfac &~ LOG_FACMASK) == 0)
+	if ((logfac &~ LOG_FACMASK) == 0)
 		LogFacility = logfac;
 
 	int retry = 0;
 	while (retry < 2) {
 		if (LogFile == -1) {
-			SyslogAddr.sun_family = AF_UNIX;
-			(void)strncpy(SyslogAddr.sun_path, _PATH_LOG,
-				      sizeof(SyslogAddr.sun_path));
 			if (LogStat & LOG_NDELAY) {
 			  LogFile = __socket(AF_UNIX, LogType | SOCK_CLOEXEC, 0);
 			  if (LogFile == -1)
@@ -378,7 +347,7 @@ openlog_internal(const char *ident, int logstat, int logfac)
 					continue;
 				}
 			} else
-				connected = 1;
+				connected = true;
 		}
 		break;
 	}
@@ -396,14 +365,6 @@ openlog (const char *ident, int logstat, int logfac)
   __libc_cleanup_pop (1);
 }
 
-#ifndef NO_SIGPIPE
-static void
-sigpipe_handler (int signo)
-{
-  closelog_internal ();
-}
-#endif
-
 static void
 closelog_internal (void)
 {
@@ -412,7 +373,7 @@ closelog_internal (void)
 
   __close (LogFile);
   LogFile = -1;
-  connected = 0;
+  connected = false;
 }
 
 void
