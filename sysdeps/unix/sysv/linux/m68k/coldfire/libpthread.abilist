@@ -1,13 +1,9 @@
-GLIBC_2.11 pthread_sigqueue F
-GLIBC_2.12 pthread_getname_np F
-GLIBC_2.12 pthread_setname_np F
-GLIBC_2.18 pthread_getattr_default_np F
+GLIBC_2.11 __libpthread_version_placeholder F
+GLIBC_2.12 __libpthread_version_placeholder F
+GLIBC_2.18 __libpthread_version_placeholder F
 GLIBC_2.28 thrd_create F
 GLIBC_2.30 __libpthread_version_placeholder F
 GLIBC_2.31 __libpthread_version_placeholder F
 GLIBC_2.4 __errno_location F
 GLIBC_2.4 __libpthread_version_placeholder F
 GLIBC_2.4 pthread_create F
-GLIBC_2.4 pthread_getcpuclockid F
-GLIBC_2.4 pthread_setaffinity_np F
-GLIBC_2.4 pthread_setschedprio F

@@ -41,6 +41,7 @@ routines = \
   elision-timed \
   elision-trylock \
   elision-unlock \
+  events \
   futex-internal \
   libc-cleanup \
   libc_multiple_threads \
@@ -112,8 +113,11 @@ routines = \
   pthread_equal \
   pthread_exit \
   pthread_getaffinity \
+  pthread_getattr_default_np \
   pthread_getattr_np \
   pthread_getconcurrency \
+  pthread_getcpuclockid \
+  pthread_getname \
   pthread_getschedparam \
   pthread_getspecific \
   pthread_join \
@@ -165,13 +169,17 @@ routines = \
   pthread_rwlockattr_setkind_np \
   pthread_rwlockattr_setpshared \
   pthread_self \
+  pthread_setaffinity \
   pthread_setattr_default_np \
   pthread_setcancelstate \
   pthread_setcanceltype \
   pthread_setconcurrency \
+  pthread_setname \
   pthread_setschedparam \
+  pthread_setschedprio \
   pthread_setspecific \
   pthread_sigmask \
+  pthread_sigqueue \
   pthread_spin_destroy \
   pthread_spin_init \
   pthread_spin_lock \
@@ -200,18 +208,10 @@ shared-only-routines = forward
 static-only-routines = pthread_atfork
 
 libpthread-routines = \
-  events \
   libpthread-compat \
   nptl-init \
   pt-interp \
   pthread_create \
-  pthread_getattr_default_np \
-  pthread_getcpuclockid \
-  pthread_getname \
-  pthread_setaffinity \
-  pthread_setname \
-  pthread_setschedprio \
-  pthread_sigqueue \
   version \
 
 libpthread-shared-only-routines = \

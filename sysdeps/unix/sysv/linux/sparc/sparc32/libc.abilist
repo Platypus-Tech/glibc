@@ -1776,12 +1776,15 @@ GLIBC_2.11 mkostemps F
 GLIBC_2.11 mkostemps64 F
 GLIBC_2.11 mkstemps F
 GLIBC_2.11 mkstemps64 F
+GLIBC_2.11 pthread_sigqueue F
 GLIBC_2.12 _sys_errlist D 0x21c
 GLIBC_2.12 _sys_nerr D 0x4
 GLIBC_2.12 ntp_gettimex F
+GLIBC_2.12 pthread_getname_np F
 GLIBC_2.12 pthread_mutex_consistent F
 GLIBC_2.12 pthread_mutexattr_getrobust F
 GLIBC_2.12 pthread_mutexattr_setrobust F
+GLIBC_2.12 pthread_setname_np F
 GLIBC_2.12 recvmmsg F
 GLIBC_2.12 sys_errlist D 0x21c
 GLIBC_2.12 sys_nerr D 0x4
@@ -1825,6 +1828,7 @@ GLIBC_2.17 clock_nanosleep F
 GLIBC_2.17 clock_settime F
 GLIBC_2.17 secure_getenv F
 GLIBC_2.18 __cxa_thread_atexit_impl F
+GLIBC_2.18 pthread_getattr_default_np F
 GLIBC_2.18 pthread_setattr_default_np F
 GLIBC_2.2 _IO_adjust_wcolumn F
 GLIBC_2.2 _IO_fgetpos F
@@ -1994,6 +1998,7 @@ GLIBC_2.2 pthread_barrierattr_init F
 GLIBC_2.2 pthread_barrierattr_setpshared F
 GLIBC_2.2 pthread_condattr_getpshared F
 GLIBC_2.2 pthread_condattr_setpshared F
+GLIBC_2.2 pthread_getcpuclockid F
 GLIBC_2.2 pthread_mutex_timedlock F
 GLIBC_2.2 pthread_mutexattr_getpshared F
 GLIBC_2.2 pthread_mutexattr_setpshared F
@@ -2271,6 +2276,7 @@ GLIBC_2.3.3 pthread_barrierattr_getpshared F
 GLIBC_2.3.3 pthread_condattr_getclock F
 GLIBC_2.3.3 pthread_condattr_setclock F
 GLIBC_2.3.3 pthread_getaffinity_np F
+GLIBC_2.3.3 pthread_setaffinity_np F
 GLIBC_2.3.3 pthread_timedjoin_np F
 GLIBC_2.3.3 pthread_tryjoin_np F
 GLIBC_2.3.3 remap_file_pages F
@@ -2304,6 +2310,8 @@ GLIBC_2.3.4 getsourcefilter F
 GLIBC_2.3.4 pthread_attr_getaffinity_np F
 GLIBC_2.3.4 pthread_attr_setaffinity_np F
 GLIBC_2.3.4 pthread_getaffinity_np F
+GLIBC_2.3.4 pthread_setaffinity_np F
+GLIBC_2.3.4 pthread_setschedprio F
 GLIBC_2.3.4 regexec F
 GLIBC_2.3.4 sched_getaffinity F
 GLIBC_2.3.4 sched_setaffinity F
@@ -2403,7 +2411,10 @@ GLIBC_2.34 pthread_condattr_getpshared F
 GLIBC_2.34 pthread_condattr_setclock F
 GLIBC_2.34 pthread_condattr_setpshared F
 GLIBC_2.34 pthread_detach F
+GLIBC_2.34 pthread_getattr_default_np F
 GLIBC_2.34 pthread_getconcurrency F
+GLIBC_2.34 pthread_getcpuclockid F
+GLIBC_2.34 pthread_getname_np F
 GLIBC_2.34 pthread_getspecific F
 GLIBC_2.34 pthread_join F
 GLIBC_2.34 pthread_key_create F
@@ -2445,9 +2456,13 @@ GLIBC_2.34 pthread_rwlockattr_getpshared F
 GLIBC_2.34 pthread_rwlockattr_init F
 GLIBC_2.34 pthread_rwlockattr_setkind_np F
 GLIBC_2.34 pthread_rwlockattr_setpshared F
+GLIBC_2.34 pthread_setaffinity_np F
 GLIBC_2.34 pthread_setattr_default_np F
 GLIBC_2.34 pthread_setconcurrency F
+GLIBC_2.34 pthread_setname_np F
+GLIBC_2.34 pthread_setschedprio F
 GLIBC_2.34 pthread_setspecific F
+GLIBC_2.34 pthread_sigqueue F
 GLIBC_2.34 pthread_spin_destroy F
 GLIBC_2.34 pthread_spin_init F
 GLIBC_2.34 pthread_spin_lock F
@@ -2470,6 +2485,7 @@ GLIBC_2.34 sem_wait F
 GLIBC_2.34 thrd_detach F
 GLIBC_2.34 thrd_exit F
 GLIBC_2.34 thrd_join F
+GLIBC_2.34 timespec_getres F
 GLIBC_2.34 tss_create F
 GLIBC_2.34 tss_delete F
 GLIBC_2.34 tss_get F

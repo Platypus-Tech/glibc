@@ -1,5 +1,5 @@
-/* Run-time dynamic linker data structures for loaded ELF shared objects. IA64.
-   Copyright (C) 2001-2021 Free Software Foundation, Inc.
+/* Optimized rawmemchr implementation for POWER10 LE.
+   Copyright (C) 2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,17 +16,7 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#ifndef	_LDSODEFS_H
+#include <sysdep.h>
 
-/* Get the real definitions.  */
-#include_next <ldsodefs.h>
-
-/* Now define our stuff.  */
-
-/* We need special support to initialize DSO loaded for statically linked
-   binaries.  */
-extern void _dl_static_init (struct link_map *map);
-#undef DL_STATIC_INIT
-#define DL_STATIC_INIT(map) _dl_static_init (map)
-
-#endif /* ldsodefs.h */
+#define USE_AS_RAWMEMCHR 1
+#include <sysdeps/powerpc/powerpc64/le/power10/strlen.S>

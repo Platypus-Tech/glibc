@@ -328,12 +328,17 @@ extern int __pthread_attr_init (pthread_attr_t *attr);
 libc_hidden_proto (__pthread_attr_init)
 extern int __pthread_attr_init_2_0 (pthread_attr_t *attr);
 
+/* Part of the legacy thread events interface (which has been
+   superseded by PTRACE_O_TRACECLONE).  This can be set by the
+   debugger before initialization is complete.  */
+extern bool __nptl_initial_report_events;
+rtld_hidden_proto (__nptl_initial_report_events)
 
 /* Event handlers for libthread_db interface.  */
 extern void __nptl_create_event (void);
 extern void __nptl_death_event (void);
-hidden_proto (__nptl_create_event)
-hidden_proto (__nptl_death_event)
+libc_hidden_proto (__nptl_create_event)
+libc_hidden_proto (__nptl_death_event)
 
 /* The fork generation counter, defined in libpthread.  */
 extern unsigned long int __fork_generation attribute_hidden;
@@ -408,7 +413,7 @@ extern int __pthread_attr_setstack (pthread_attr_t *__attr, void *__stackaddr,
 int __pthread_attr_setaffinity_np (pthread_attr_t *, size_t, const cpu_set_t *);
 libc_hidden_proto (__pthread_attr_setaffinity_np)
 extern __typeof (pthread_getattr_default_np) __pthread_getattr_default_np;
-libpthread_hidden_proto (__pthread_getattr_default_np)
+libc_hidden_proto (__pthread_getattr_default_np)
 extern int __pthread_rwlock_init (pthread_rwlock_t *__restrict __rwlock,
 				  const pthread_rwlockattr_t *__restrict
 				  __attr);

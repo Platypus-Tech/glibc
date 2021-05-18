@@ -1501,6 +1501,8 @@ GLIBC_2.16 pthread_exit F
 GLIBC_2.16 pthread_getaffinity_np F
 GLIBC_2.16 pthread_getattr_np F
 GLIBC_2.16 pthread_getconcurrency F
+GLIBC_2.16 pthread_getcpuclockid F
+GLIBC_2.16 pthread_getname_np F
 GLIBC_2.16 pthread_getschedparam F
 GLIBC_2.16 pthread_getspecific F
 GLIBC_2.16 pthread_join F
@@ -1551,12 +1553,16 @@ GLIBC_2.16 pthread_rwlockattr_init F
 GLIBC_2.16 pthread_rwlockattr_setkind_np F
 GLIBC_2.16 pthread_rwlockattr_setpshared F
 GLIBC_2.16 pthread_self F
+GLIBC_2.16 pthread_setaffinity_np F
 GLIBC_2.16 pthread_setcancelstate F
 GLIBC_2.16 pthread_setcanceltype F
 GLIBC_2.16 pthread_setconcurrency F
+GLIBC_2.16 pthread_setname_np F
 GLIBC_2.16 pthread_setschedparam F
+GLIBC_2.16 pthread_setschedprio F
 GLIBC_2.16 pthread_setspecific F
 GLIBC_2.16 pthread_sigmask F
+GLIBC_2.16 pthread_sigqueue F
 GLIBC_2.16 pthread_spin_destroy F
 GLIBC_2.16 pthread_spin_init F
 GLIBC_2.16 pthread_spin_lock F
@@ -2209,6 +2215,7 @@ GLIBC_2.17 clock_nanosleep F
 GLIBC_2.17 clock_settime F
 GLIBC_2.17 secure_getenv F
 GLIBC_2.18 __cxa_thread_atexit_impl F
+GLIBC_2.18 pthread_getattr_default_np F
 GLIBC_2.18 pthread_setattr_default_np F
 GLIBC_2.22 fmemopen F
 GLIBC_2.23 fts64_children F
@@ -2379,7 +2386,10 @@ GLIBC_2.34 pthread_condattr_getpshared F
 GLIBC_2.34 pthread_condattr_setclock F
 GLIBC_2.34 pthread_condattr_setpshared F
 GLIBC_2.34 pthread_detach F
+GLIBC_2.34 pthread_getattr_default_np F
 GLIBC_2.34 pthread_getconcurrency F
+GLIBC_2.34 pthread_getcpuclockid F
+GLIBC_2.34 pthread_getname_np F
 GLIBC_2.34 pthread_getspecific F
 GLIBC_2.34 pthread_join F
 GLIBC_2.34 pthread_key_create F
@@ -2421,9 +2431,13 @@ GLIBC_2.34 pthread_rwlockattr_getpshared F
 GLIBC_2.34 pthread_rwlockattr_init F
 GLIBC_2.34 pthread_rwlockattr_setkind_np F
 GLIBC_2.34 pthread_rwlockattr_setpshared F
+GLIBC_2.34 pthread_setaffinity_np F
 GLIBC_2.34 pthread_setattr_default_np F
 GLIBC_2.34 pthread_setconcurrency F
+GLIBC_2.34 pthread_setname_np F
+GLIBC_2.34 pthread_setschedprio F
 GLIBC_2.34 pthread_setspecific F
+GLIBC_2.34 pthread_sigqueue F
 GLIBC_2.34 pthread_spin_destroy F
 GLIBC_2.34 pthread_spin_init F
 GLIBC_2.34 pthread_spin_lock F
@@ -2446,6 +2460,7 @@ GLIBC_2.34 sem_wait F
 GLIBC_2.34 thrd_detach F
 GLIBC_2.34 thrd_exit F
 GLIBC_2.34 thrd_join F
+GLIBC_2.34 timespec_getres F
 GLIBC_2.34 tss_create F
 GLIBC_2.34 tss_delete F
 GLIBC_2.34 tss_get F

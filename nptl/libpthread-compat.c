@@ -45,6 +45,16 @@ compat_symbol (libpthread, __libpthread_version_placeholder_1,
 	       __libpthread_version_placeholder, GLIBC_2_1_2);
 #endif
 
+/* Do not create the placeholder symbol version if there are other
+   symbols left that keep the version around (because GLIBC_2.0 got
+   promoted to GLIBC_2.2).  */
+#if SHLIB_COMPAT (libpthread, GLIBC_2_2, GLIBC_2_2_3) \
+  && ABI_libpthread_GLIBC_2_2 != ABI_libpthread_GLIBC_2_0 \
+  && ABI_libpthread_GLIBC_2_2 != ABI_libpthread_GLIBC_2_1_3
+compat_symbol (libpthread, __libpthread_version_placeholder_1,
+	       __libpthread_version_placeholder, GLIBC_2_2);
+#endif
+
 #if (SHLIB_COMPAT (libpthread, GLIBC_2_2_3, GLIBC_2_2_4))
 compat_symbol (libpthread, __libpthread_version_placeholder_1,
 	       __libpthread_version_placeholder, GLIBC_2_2_3);
@@ -60,9 +70,35 @@ compat_symbol (libpthread, __libpthread_version_placeholder_1,
 	       __libpthread_version_placeholder, GLIBC_2_3_2);
 #endif
 
+#if (SHLIB_COMPAT (libpthread, GLIBC_2_3_3, GLIBC_2_3_4))
+compat_symbol (libpthread, __libpthread_version_placeholder_1,
+	       __libpthread_version_placeholder, GLIBC_2_3_3);
+#endif
+
+#if (SHLIB_COMPAT (libpthread, GLIBC_2_3_4, GLIBC_2_4))
+compat_symbol (libpthread, __libpthread_version_placeholder_1,
+	       __libpthread_version_placeholder, GLIBC_2_3_4);
+#endif
+
 #if (SHLIB_COMPAT (libpthread, GLIBC_2_4, GLIBC_2_5))
 compat_symbol (libpthread, __libpthread_version_placeholder_1,
 	       __libpthread_version_placeholder, GLIBC_2_4);
+#endif
+
+#if SHLIB_COMPAT (libpthread, GLIBC_2_11, GLIBC_2_12)
+compat_symbol (libpthread, __libpthread_version_placeholder_1,
+	       __libpthread_version_placeholder, GLIBC_2_11);
+#endif
+
+#if SHLIB_COMPAT (libpthread, GLIBC_2_12, GLIBC_2_13)
+compat_symbol (libpthread, __libpthread_version_placeholder_1,
+	       __libpthread_version_placeholder, GLIBC_2_12);
+#endif
+
+#if SHLIB_COMPAT (libpthread, GLIBC_2_18, GLIBC_2_19) \
+  && ABI_libpthread_GLIBC_2_18 != ABI_libpthread_GLIBC_2_0
+compat_symbol (libpthread, __libpthread_version_placeholder_1,
+	       __libpthread_version_placeholder, GLIBC_2_18);
 #endif
 
 #if (SHLIB_COMPAT (libpthread, GLIBC_2_30, GLIBC_2_31))

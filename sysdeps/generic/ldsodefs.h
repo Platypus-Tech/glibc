@@ -135,12 +135,6 @@ dl_symbol_visibility_binds_local_p (const ElfW(Sym) *sym)
 # define DL_UNMAP(map)	_dl_unmap_segments (map)
 #endif
 
-/* By default we do not need special support to initialize DSOs loaded
-   by statically linked binaries.  */
-#ifndef DL_STATIC_INIT
-# define DL_STATIC_INIT(map)
-#endif
-
 /* Reloc type classes as returned by elf_machine_type_class().
    ELF_RTYPE_CLASS_PLT means this reloc should not be satisfied by
    some PLT symbol, ELF_RTYPE_CLASS_COPY means this reloc should not be
@@ -443,12 +437,8 @@ struct rtld_global
   } *_dl_tls_dtv_slotinfo_list;
   /* Number of modules in the static TLS block.  */
   EXTERN size_t _dl_tls_static_nelem;
-  /* Size of the static TLS block.  */
-  EXTERN size_t _dl_tls_static_size;
   /* Size actually allocated in the static TLS block.  */
   EXTERN size_t _dl_tls_static_used;
-  /* Alignment requirement of the static TLS block.  */
-  EXTERN size_t _dl_tls_static_align;
   /* Remaining amount of static TLS that may be used for optimizing
      dynamic TLS access (e.g. with TLSDESC).  */
   EXTERN size_t _dl_tls_static_optional;
@@ -615,6 +605,12 @@ struct rtld_global_ro
      0 if not, -2 use the default (honor biases for normal
      binaries, don't honor for PIEs).  */
   EXTERN ElfW(Addr) _dl_use_load_bias;
+
+  /* Size of the static TLS block.  */
+  EXTERN size_t _dl_tls_static_size;
+
+  /* Alignment requirement of the static TLS block.  */
+  EXTERN size_t _dl_tls_static_align;
 
   /* Size of surplus space in the static TLS area for dynamically
      loaded modules with IE-model TLS or for TLSDESC optimization.
@@ -1312,6 +1308,13 @@ dl_init_static_tls (struct link_map *map)
   GL (dl_init_static_tls) (map);
 #endif
 }
+
+#ifndef SHARED
+/* Called before relocating ld.so during static dlopen.  This can be
+   used to partly initialize the dormant ld.so copy in the static
+   dlopen namespace.  */
+void __rtld_static_init (struct link_map *map) attribute_hidden;
+#endif
 
 /* Return true if the ld.so copy in this namespace is actually active
    and working.  If false, the dl_open/dlfcn hooks have to be used to

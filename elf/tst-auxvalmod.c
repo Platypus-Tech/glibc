@@ -1,5 +1,5 @@
-/* Get the resolution of a clock.  Stub version.
-   Copyright (C) 1999-2021 Free Software Foundation, Inc.
+/* Wrapper for getauxval testing.
+   Copyright (C) 2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -17,23 +17,13 @@
    <https://www.gnu.org/licenses/>.  */
 
 #include <errno.h>
-#include <time.h>
-#include <shlib-compat.h>
+#include <sys/auxv.h>
 
-/* Get resolution of clock.  */
-int
-__clock_getres (clockid_t clock_id, struct timespec *res)
+unsigned long
+getauxval_wrapper (unsigned long type, int *errnop)
 {
-  __set_errno (ENOSYS);
-  return -1;
+  errno = *errnop;
+  unsigned long result = getauxval (type);
+  *errnop = errno;
+  return result;
 }
-libc_hidden_def (__clock_getres)
-
-versioned_symbol (libc, __clock_getres, clock_getres, GLIBC_2_17);
-/* clock_getres moved to libc in version 2.17;
-   old binaries may expect the symbol version it had in librt.  */
-#if SHLIB_COMPAT (libc, GLIBC_2_2, GLIBC_2_17)
-compat_symbol (libc, __clock_getres, clock_getres, GLIBC_2_2);
-#endif
-
-stub_warning (clock_getres)
