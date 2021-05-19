@@ -1,4 +1,5 @@
-/* Copyright (C) 1991-2021 Free Software Foundation, Inc.
+/* Clean up allocated libpthread memory on demand.
+   Copyright (C) 2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -15,18 +16,9 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include <unistd.h>
-#include <hurd.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-/* Replace the current process, executing FILE_NAME with arguments ARGV and
-   environment ENVP.  ARGV and ENVP are terminated by NULL pointers.  */
-int
-__execve (const char *file_name, char *const argv[], char *const envp[])
+/* Free libpthread.so resources.
+   Note: Caller ensures we are called only once.  */
+void
+__libpthread_freeres (void)
 {
-  return __execveat (AT_FDCWD, file_name, argv, envp, 0);
 }
-
-weak_alias (__execve, execve)
