@@ -45,7 +45,6 @@ routines = \
   futex-internal \
   libc-cleanup \
   libc_multiple_threads \
-  libc_pthread_init \
   lowlevellock \
   nptl-stack \
   nptl_deallocate_tsd \
@@ -109,6 +108,7 @@ routines = \
   pthread_condattr_init \
   pthread_condattr_setclock \
   pthread_condattr_setpshared \
+  pthread_create \
   pthread_detach \
   pthread_equal \
   pthread_exit \
@@ -207,17 +207,8 @@ routines = \
 shared-only-routines = forward
 static-only-routines = pthread_atfork
 
-libpthread-routines = \
-  libpthread-compat \
-  nptl-init \
-  pt-interp \
-  pthread_create \
-  version \
-
-libpthread-shared-only-routines = \
-  pt-allocrtsig \
-  pt-interp \
-  version \
+libpthread-routines = libpthread-compat
+libpthread-shared-only-routines = libpthread-compat
 
 # Since cancellation handling is in large parts handled using exceptions
 # we have to compile some files with exception handling enabled, some
@@ -383,7 +374,7 @@ else
 tests-printers-libs := $(static-thread-library)
 endif
 
-LDFLAGS-pthread.so = -Wl,--enable-new-dtags,-z,nodelete,-z,initfirst
+LDFLAGS-pthread.so = -Wl,--enable-new-dtags,-z,nodelete
 
 tests += tst-cancelx7 tst-cancelx17
 
@@ -433,17 +424,6 @@ $(objpfx)multidir.mk: $(common-objpfx)config.make
 	echo "multidir := $$dir" > $@T
 	mv -f $@T $@
 
-crti-objs := crti.o
-crtn-objs := crtn.o
-ifneq (,$(patsubst .,,$(multidir)))
-generated-dirs += $(firstword $(subst /, , $(multidir)))
-crti-objs += $(multidir)/crti.o
-crtn-objs += $(multidir)/crtn.o
-$(objpfx)$(multidir):
-	mkdir -p $@
-endif
-extra-objs += $(crti-objs) $(crtn-objs)
-extra-objs += pt-crti.o
 endif
 
 CFLAGS-ftrylockfile.c += $(libio-mtsafe)
@@ -578,11 +558,6 @@ $(objpfx)tst-cancelx17: $(librt)
 LDLIBS-tst-cancel24 = -Wl,--no-as-needed -lstdc++
 LDLIBS-tst-cancel24-static = $(LDLIBS-tst-cancel24)
 
-extra-B-pthread.so = -B$(common-objpfx)nptl/
-$(objpfx)libpthread.so: $(addprefix $(objpfx),$(crti-objs) $(crtn-objs))
-$(objpfx)libpthread.so: +preinit += $(addprefix $(objpfx),$(crti-objs))
-$(objpfx)libpthread.so: +postinit += $(addprefix $(objpfx),$(crtn-objs))
-
 # Make sure we link with the thread library.
 ifeq ($(build-shared),yes)
 $(addprefix $(objpfx), \
@@ -602,23 +577,7 @@ $(addprefix $(objpfx),$(tests) $(test-srcs)): $(objpfx)libpthread.a
 endif
 
 ifeq ($(build-shared),yes)
-$(objpfx)crti.o: $(objpfx)pt-crti.o
-	ln -f $< $@
-
-ifneq ($(multidir),.)
-$(objpfx)$(multidir)/crti.o: $(objpfx)crti.o $(objpfx)$(multidir)/
-	ln -f $< $@
-
-$(objpfx)$(multidir)/crtn.o: $(objpfx)crtn.o $(objpfx)$(multidir)/
-	ln -f $< $@
-endif
-
 generated += multidir.mk tst-tls6.out
-
-# Give libpthread.so an entry point and make it directly runnable itself.
-LDFLAGS-pthread.so += -e __nptl_main
-# pt-interp.c exists just to get the runtime linker path into libpthread.so.
-$(objpfx)pt-interp.os: $(common-objpfx)runtime-linker.h
 endif
 
 tst-exec4-ARGS = $(host-test-program-cmd)

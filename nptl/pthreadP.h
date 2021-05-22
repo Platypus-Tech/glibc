@@ -205,10 +205,6 @@ libc_hidden_proto (__default_pthread_attr_lock)
 /* Called from __libc_freeres to deallocate the default attribute.  */
 extern void __default_pthread_attr_freeres (void) attribute_hidden;
 
-/* Size and alignment of static TLS block.  */
-extern size_t __static_tls_size attribute_hidden;
-extern size_t __static_tls_align_m1 attribute_hidden;
-
 /* Attribute handling.  */
 extern struct pthread_attr *__attr_list attribute_hidden;
 extern int __attr_list_lock attribute_hidden;
@@ -318,9 +314,10 @@ libc_hidden_proto (__pthread_cleanup_upto)
 
 
 /* Functions with versioned interfaces.  */
-extern int __pthread_create_2_1 (pthread_t *newthread,
-				 const pthread_attr_t *attr,
-				 void *(*start_routine) (void *), void *arg);
+extern int __pthread_create (pthread_t *newthread,
+			     const pthread_attr_t *attr,
+			     void *(*start_routine) (void *), void *arg);
+libc_hidden_proto (__pthread_create)
 extern int __pthread_create_2_0 (pthread_t *newthread,
 				 const pthread_attr_t *attr,
 				 void *(*start_routine) (void *), void *arg);
@@ -347,6 +344,7 @@ extern unsigned long int __fork_generation attribute_hidden;
 extern unsigned long int *__fork_generation_pointer attribute_hidden;
 
 extern size_t __pthread_get_minstack (const pthread_attr_t *attr);
+libc_hidden_proto (__pthread_get_minstack)
 
 /* Namespace save aliases.  */
 extern int __pthread_getschedparam (pthread_t thread_id, int *policy,
@@ -570,6 +568,12 @@ libc_hidden_proto (__pthread_attr_setsigmask_internal)
 
 extern __typeof (pthread_attr_getsigmask_np) __pthread_attr_getsigmask_np;
 libc_hidden_proto (__pthread_attr_getsigmask_np)
+
+/* The cancellation signal handler defined alongside with
+   pthread_cancel.  This is included in statically linked binaries
+   only if pthread_cancel is linked in.  */
+void __nptl_sigcancel_handler (int sig, siginfo_t *si, void *ctx);
+libc_hidden_proto (__nptl_sigcancel_handler)
 
 /* Special versions which use non-exported functions.  */
 extern void __pthread_cleanup_push (struct _pthread_cleanup_buffer *buffer,

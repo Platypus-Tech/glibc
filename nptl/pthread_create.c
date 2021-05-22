@@ -36,6 +36,7 @@
 #include <tls-setup.h>
 #include "libioP.h"
 #include <sys/single_threaded.h>
+#include <version.h>
 
 #include <shlib-compat.h>
 
@@ -55,6 +56,46 @@ static struct pthread *__nptl_last_event __attribute_used__;
 static struct rtld_global *__nptl_rtld_global __attribute_used__
   = &_rtld_global;
 #endif
+
+/* Version of the library, used in libthread_db to detect mismatches.  */
+static const char nptl_version[] __attribute_used__ = VERSION;
+
+/* This performs the initialization necessary when going from
+   single-threaded to multi-threaded mode for the first time.  */
+static void
+late_init (void)
+{
+  struct sigaction sa;
+  __sigemptyset (&sa.sa_mask);
+
+  /* Install the cancellation signal handler (in static builds only if
+     pthread_cancel has been linked in).  If for some reason we cannot
+     install the handler we do not abort.  Maybe we should, but it is
+     only asynchronous cancellation which is affected.  */
+#ifndef SHARED
+  extern __typeof (__nptl_sigcancel_handler) __nptl_sigcancel_handler
+    __attribute__ ((weak));
+  if (__nptl_sigcancel_handler != NULL)
+#endif
+    {
+      sa.sa_sigaction = __nptl_sigcancel_handler;
+      sa.sa_flags = SA_SIGINFO;
+      (void) __libc_sigaction (SIGCANCEL, &sa, NULL);
+    }
+
+  /* Install the handle to change the threads' uid/gid.  */
+  sa.sa_sigaction = __nptl_setxid_sighandler;
+  sa.sa_flags = SA_SIGINFO | SA_RESTART;
+  (void) __libc_sigaction (SIGSETXID, &sa, NULL);
+
+  /* The parent process might have left the signals blocked.  Just in
+     case, unblock it.  We reuse the signal mask in the sigaction
+     structure.  It is already cleared.  */
+  __sigaddset (&sa.sa_mask, SIGCANCEL);
+  __sigaddset (&sa.sa_mask, SIGSETXID);
+  INTERNAL_SYSCALL_CALL (rt_sigprocmask, SIG_UNBLOCK, &sa.sa_mask,
+			 NULL, __NSIG_BYTES);
+}
 
 /* Code to allocate and deallocate a stack.  */
 #include "allocatestack.c"
@@ -459,9 +500,13 @@ __pthread_create_2_1 (pthread_t *newthread, const pthread_attr_t *attr,
 {
   STACK_VARIABLES;
 
-  /* Avoid a data race in the multi-threaded case.  */
+  /* Avoid a data race in the multi-threaded case, and call the
+     deferred initialization only once.  */
   if (__libc_single_threaded)
-    __libc_single_threaded = 0;
+    {
+      late_init ();
+      __libc_single_threaded = 0;
+    }
 
   const struct pthread_attr *iattr = (struct pthread_attr *) attr;
   union pthread_attr_transparent default_attr;
@@ -717,10 +762,17 @@ __pthread_create_2_1 (pthread_t *newthread, const pthread_attr_t *attr,
 
   return retval;
 }
-versioned_symbol (libpthread, __pthread_create_2_1, pthread_create, GLIBC_2_1);
+versioned_symbol (libc, __pthread_create_2_1, pthread_create, GLIBC_2_34);
+libc_hidden_ver (__pthread_create_2_1, __pthread_create)
+#ifndef SHARED
+strong_alias (__pthread_create_2_1, __pthread_create)
+#endif
 
+#if OTHER_SHLIB_COMPAT (libpthread, GLIBC_2_1, GLIBC_2_34)
+compat_symbol (libpthread, __pthread_create_2_1, pthread_create, GLIBC_2_1);
+#endif
 
-#if SHLIB_COMPAT(libpthread, GLIBC_2_0, GLIBC_2_1)
+#if OTHER_SHLIB_COMPAT (libpthread, GLIBC_2_0, GLIBC_2_1)
 int
 __pthread_create_2_0 (pthread_t *newthread, const pthread_attr_t *attr,
 		      void *(*start_routine) (void *), void *arg)

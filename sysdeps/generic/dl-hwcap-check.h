@@ -1,6 +1,6 @@
-/* Copyright (C) 2002-2021 Free Software Foundation, Inc.
+/* Check for hardware capabilities after HWCAP parsing.  Generic version.
+   Copyright (C) 2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
-   Contributed by Ulrich Drepper <drepper@redhat.com>, 2002.
 
    The GNU C Library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -16,20 +16,13 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include <unistd.h>
-#include <list.h>
-#include <register-atfork.h>
-#include <dl-sysdep.h>
-#include <tls.h>
-#include <string.h>
-#include <pthreadP.h>
-#include <libc-lock.h>
-#include <sysdep.h>
-#include <ldsodefs.h>
+#ifndef _DL_HWCAP_CHECK_H
+#define _DL_HWCAP_CHECK_H
 
-void
-__libc_pthread_init (void (*reclaim) (void))
+static inline void
+dl_hwcap_check (void)
 {
-  /* Called by a child after fork.  */
-  __register_atfork (NULL, NULL, reclaim, NULL);
+  /* The generic implementation does not perform any checks.  */
 }
+
+#endif /* _DL_HWCAP_CHECK_H */

@@ -38,6 +38,7 @@ libc {
     pthread_cond_wait;
     pthread_condattr_destroy;
     pthread_condattr_init;
+    pthread_create;
     pthread_detach;
     pthread_equal;
     pthread_exit;
@@ -80,6 +81,7 @@ libc {
     pthread_attr_setguardsize;
     pthread_attr_setstackaddr;
     pthread_attr_setstacksize;
+    pthread_create;
     pthread_getconcurrency;
     pthread_mutexattr_gettype;
     pthread_mutexattr_settype;
@@ -217,6 +219,7 @@ libc {
     mtx_trylock;
     mtx_unlock;
     thrd_current;
+    thrd_create;
     thrd_detach;
     thrd_equal;
     thrd_exit;
@@ -358,6 +361,7 @@ libc {
     sem_trywait;
     sem_unlink;
     sem_wait;
+    thrd_create;
     thrd_detach;
     thrd_exit;
     thrd_join;
@@ -367,8 +371,6 @@ libc {
     tss_set;
   }
   GLIBC_PRIVATE {
-     __nptl_create_event;
-     __nptl_death_event;
     __default_pthread_attr;
     __default_pthread_attr_lock;
     __futex_abstimed_wait64;
@@ -386,11 +388,14 @@ libc {
     __lll_trylock_elision;
     __lll_unlock_elision;
     __mutex_aconf;
+    __nptl_create_event;
     __nptl_deallocate_stack;
     __nptl_deallocate_tsd;
+    __nptl_death_event;
     __nptl_free_tcb;
     __nptl_nthreads;
     __nptl_setxid_sighandler;
+    __nptl_sigcancel_handler;
     __nptl_stack_list_add;
     __nptl_stack_list_del;
     __pthread_attr_copy;
@@ -407,8 +412,7 @@ libc {
     __pthread_disable_asynccancel;
     __pthread_enable_asynccancel;
     __pthread_force_elision;
-    __pthread_getattr_default_np;
-    __pthread_getattr_default_np;
+    __pthread_get_minstack;
     __pthread_keys;
     __pthread_mutex_unlock_usercnt;
     __pthread_setcancelstate;
@@ -422,21 +426,11 @@ libc {
 
 libpthread {
   GLIBC_2.0 {
-    _Exit;
-    _IO_flockfile;
-    _IO_ftrylockfile;
-    _IO_funlockfile;
-    __errno_location;
-    _exit;
-    flockfile;
-    ftrylockfile;
-    funlockfile;
-    pthread_create;
-    pthread_sigmask;
+    __libpthread_version_placeholder;
   }
 
   GLIBC_2.1 {
-    pthread_create;
+    __libpthread_version_placeholder;
   }
 
   GLIBC_2.1.1 {
@@ -493,9 +487,11 @@ libpthread {
   GLIBC_2.19 {
   }
 
-  # C11 thread symbols.
   GLIBC_2.28 {
-    thrd_create;
+    __libpthread_version_placeholder;
+  }
+
+  GLIBC_2.29 {
   }
 
   GLIBC_2.30 {
@@ -509,7 +505,6 @@ libpthread {
   GLIBC_PRIVATE {
     __pthread_clock_gettime;
     __pthread_clock_settime;
-    __pthread_get_minstack;
     __pthread_initialize_minimal;
   }
 }
