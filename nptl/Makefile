@@ -204,11 +204,14 @@ routines = \
   unwind \
   vars \
 
-shared-only-routines = forward
 static-only-routines = pthread_atfork
-
 libpthread-routines = libpthread-compat
 libpthread-shared-only-routines = libpthread-compat
+
+# Pretend that libpthread.so is a linker script, so that the symbolic
+# link is not installed.
+install-lib-ldscripts = libpthread.so
+$(inst_libdir)/libpthread.so:
 
 # Since cancellation handling is in large parts handled using exceptions
 # we have to compile some files with exception handling enabled, some
@@ -283,6 +286,7 @@ tests = tst-attr2 tst-attr3 tst-default-attr \
 	tst-exec4 tst-exec5 \
 	tst-stack2 tst-stack3 tst-stack4 \
 	tst-pthread-attr-affinity \
+	tst-pthread-attr-affinity-fail \
 	tst-dlsym1 \
 	tst-context1 \
 	tst-sched1 \
@@ -367,14 +371,6 @@ CPPFLAGS-tst-pthread-gdb-attach-static.c := \
 # As of version 9.2, GDB cannot attach properly to PIE programs that
 # were launched with an explicit ld.so invocation.
 tst-pthread-gdb-attach-no-pie = yes
-
-ifeq ($(build-shared),yes)
-tests-printers-libs := $(shared-thread-library)
-else
-tests-printers-libs := $(static-thread-library)
-endif
-
-LDFLAGS-pthread.so = -Wl,--enable-new-dtags,-z,nodelete
 
 tests += tst-cancelx7 tst-cancelx17
 
@@ -501,7 +497,7 @@ $(objpfx)tst-stack3-mem.out: $(objpfx)tst-stack3.out
 	$(evaluate-test)
 generated += tst-stack3-mem.out tst-stack3.mtrace
 
-$(objpfx)tst-stack4: $(libdl) $(shared-thread-library)
+$(objpfx)tst-stack4: $(libdl)
 tst-stack4mod.sos=$(shell for i in 0 1 2 3 4 5 6 7 8 9 10 \
 				   11 12 13 14 15 16 17 18 19; do \
 			    for j in 0 1 2 3 4 5 6 7 8 9 10 \
@@ -514,19 +510,18 @@ $(tst-stack4mod.sos): $(objpfx)tst-stack4mod.so
 clean:
 	rm -f $(tst-stack4mod.sos)
 
-$(objpfx)tst-cleanup4: $(objpfx)tst-cleanup4aux.o $(shared-thread-library)
-$(objpfx)tst-cleanupx4: $(objpfx)tst-cleanupx4aux.o $(shared-thread-library)
+$(objpfx)tst-cleanup4: $(objpfx)tst-cleanup4aux.o
+$(objpfx)tst-cleanupx4: $(objpfx)tst-cleanupx4aux.o
 
-$(objpfx)tst-tls3: $(libdl) $(shared-thread-library)
+$(objpfx)tst-tls3: $(libdl)
 LDFLAGS-tst-tls3 = -rdynamic
 $(objpfx)tst-tls3.out: $(objpfx)tst-tls3mod.so
-$(objpfx)tst-tls3mod.so: $(shared-thread-library)
 
-$(objpfx)tst-tls3-malloc: $(libdl) $(shared-thread-library)
+$(objpfx)tst-tls3-malloc: $(libdl)
 LDFLAGS-tst-tls3-malloc = -rdynamic
 $(objpfx)tst-tls3-malloc.out: $(objpfx)tst-tls3mod.so
 
-$(objpfx)tst-tls5: $(objpfx)tst-tls5mod.so $(shared-thread-library)
+$(objpfx)tst-tls5: $(objpfx)tst-tls5mod.so
 LDFLAGS-tst-tls5 = -Wl,--no-as-needed
 LDFLAGS-tst-tls5mod.so = -Wl,-soname,tst-tls5mod.so
 
@@ -540,7 +535,7 @@ $(objpfx)tst-tls6.out: tst-tls6.sh $(objpfx)tst-tls5 \
 	$(evaluate-test)
 endif
 
-$(objpfx)tst-dlsym1: $(libdl) $(shared-thread-library)
+$(objpfx)tst-dlsym1: $(libdl)
 
 ifeq (yes,$(build-shared))
 librt = $(common-objpfx)rt/librt.so
@@ -548,35 +543,15 @@ else
 librt = $(common-objpfx)rt/librt.a
 endif
 
-# `make check' sometimes triggers a rebuild of librt.so using this Makefile,
-# which ignores librt's dependence on libpthread
-$(common-objpfx)rt/librt.so: $(shared-thread-library)
-
 $(objpfx)tst-cancel17: $(librt)
 $(objpfx)tst-cancelx17: $(librt)
 
 LDLIBS-tst-cancel24 = -Wl,--no-as-needed -lstdc++
 LDLIBS-tst-cancel24-static = $(LDLIBS-tst-cancel24)
 
-# Make sure we link with the thread library.
 ifeq ($(build-shared),yes)
-$(addprefix $(objpfx), \
-  $(filter-out $(tests-static) $(xtests-static) $(tests-reverse) \
-    $(tests-nolibpthread), \
-    $(tests) $(tests-internal) $(xtests) $(test-srcs) $(tests-container))): \
-	$(objpfx)libpthread.so
 $(objpfx)tst-unload: $(libdl)
-# $(objpfx)../libc.so is used instead of $(common-objpfx)libc.so,
-# since otherwise libpthread.so comes before libc.so when linking.
-$(addprefix $(objpfx), $(tests-reverse)): \
-  $(objpfx)../libc.so $(objpfx)libpthread.so
-$(objpfx)../libc.so: $(common-objpfx)libc.so ;
-$(addprefix $(objpfx),$(tests-static) $(xtests-static)): $(objpfx)libpthread.a
-else
-$(addprefix $(objpfx),$(tests) $(test-srcs)): $(objpfx)libpthread.a
-endif
 
-ifeq ($(build-shared),yes)
 generated += multidir.mk tst-tls6.out
 endif
 
