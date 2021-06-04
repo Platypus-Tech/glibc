@@ -28,22 +28,12 @@
 #include <assert.h>
 #include <dlerror.h>
 
-#if !defined SHARED && IS_IN (libdl)
-
-char *
-dlerror (void)
-{
-  return __dlerror ();
-}
-
-#else
-
 char *
 __dlerror (void)
 {
 # ifdef SHARED
   if (!rtld_active ())
-    return _dlfcn_hook->dlerror ();
+    return GLRO (dl_dlfcn_hook)->dlerror ();
 # endif
 
   struct dl_action_result *result = __libc_dlerror_result;
@@ -86,11 +76,15 @@ __dlerror (void)
 		    result->objname[0] == '\0' ? "" : ": ",
 		    _(result->errstring));
   else
-    n = __asprintf (&buf, "%s%s%s: %s",
-		    result->objname,
-		    result->objname[0] == '\0' ? "" : ": ",
-		    _(result->errstring),
-		    strerror (result->errcode));
+    {
+      __set_errno (result->errcode);
+      n = __asprintf (&buf, "%s%s%s: %m",
+		      result->objname,
+		      result->objname[0] == '\0' ? "" : ": ",
+		      _(result->errstring));
+      /* Set errno again in case asprintf clobbered it.  */
+      __set_errno (result->errcode);
+    }
 
   /* Mark the error as delivered.  */
   result->returned = true;
@@ -108,9 +102,11 @@ __dlerror (void)
        existing string as a fallback.  */
     return result->errstring;
 }
-# ifdef SHARED
-strong_alias (__dlerror, dlerror)
-# endif
+versioned_symbol (libc, __dlerror, dlerror, GLIBC_2_34);
+
+#if OTHER_SHLIB_COMPAT (libdl, GLIBC_2_0, GLIBC_2_34)
+compat_symbol (libdl, __dlerror, dlerror, GLIBC_2_0);
+#endif
 
 int
 _dlerror_run (void (*operate) (void *), void *args)
@@ -200,35 +196,4 @@ _dlerror_run (void (*operate) (void *), void *args)
       return 1;
     }
 }
-
-# ifdef SHARED
-
-struct dlfcn_hook *_dlfcn_hook __attribute__((nocommon));
-libdl_hidden_data_def (_dlfcn_hook)
-
-# else
-
-static struct dlfcn_hook _dlfcn_hooks =
-  {
-    .dlopen = __dlopen,
-    .dlclose = __dlclose,
-    .dlsym = __dlsym,
-    .dlvsym = __dlvsym,
-    .dlerror = __dlerror,
-    .dladdr = __dladdr,
-    .dladdr1 = __dladdr1,
-    .dlinfo = __dlinfo,
-    .dlmopen = __dlmopen
-  };
-
-void
-__libc_register_dlfcn_hook (struct link_map *map)
-{
-  struct dlfcn_hook **hook;
-
-  hook = (struct dlfcn_hook **) __libc_dlsym_private (map, "_dlfcn_hook");
-  if (hook != NULL)
-    *hook = &_dlfcn_hooks;
-}
-# endif
-#endif
+libc_hidden_def (_dlerror_run)

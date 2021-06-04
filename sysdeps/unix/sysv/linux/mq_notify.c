@@ -133,8 +133,11 @@ helper_thread (void *arg)
 	    (void) __pthread_barrier_wait (&notify_barrier);
 	}
       else if (data.raw[NOTIFY_COOKIE_LEN - 1] == NOTIFY_REMOVED)
-	/* The only state we keep is the copy of the thread attributes.  */
-	free (data.attr);
+	{
+	  /* The only state we keep is the copy of the thread attributes.  */
+	  pthread_attr_destroy (data.attr);
+	  free (data.attr);
+	}
     }
   return NULL;
 }
@@ -255,8 +258,14 @@ mq_notify (mqd_t mqdes, const struct sigevent *notification)
       if (data.attr == NULL)
 	return -1;
 
-      memcpy (data.attr, notification->sigev_notify_attributes,
-	      sizeof (pthread_attr_t));
+      int ret = __pthread_attr_copy (data.attr,
+				     notification->sigev_notify_attributes);
+      if (ret != 0)
+	{
+	  free (data.attr);
+	  __set_errno (ret);
+	  return -1;
+	}
     }
 
   /* Construct the new request.  */
@@ -269,8 +278,11 @@ mq_notify (mqd_t mqdes, const struct sigevent *notification)
   int retval = INLINE_SYSCALL (mq_notify, 2, mqdes, &se);
 
   /* If it failed, free the allocated memory.  */
-  if (__glibc_unlikely (retval != 0))
-    free (data.attr);
+  if (retval != 0 && data.attr != NULL)
+    {
+      pthread_attr_destroy (data.attr);
+      free (data.attr);
+    }
 
   return retval;
 }

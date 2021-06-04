@@ -24,7 +24,7 @@
 /* This file is for compatibility with glibc 2.0.  Compile it only if
    versioning is used.  */
 #include <shlib-compat.h>
-#if SHLIB_COMPAT (libdl, GLIBC_2_0, GLIBC_2_1)
+#if OTHER_SHLIB_COMPAT (libdl, GLIBC_2_0, GLIBC_2_1)
 
 struct dlopen_args
 {
@@ -54,7 +54,7 @@ dlopen_doit (void *a)
   args->new = GLRO(dl_open) (args->file ?: "", args->mode | __RTLD_DLOPEN,
 			     args->caller,
 			     args->file == NULL ? LM_ID_BASE : NS,
-			     __dlfcn_argc, __dlfcn_argv, __environ);
+			     __libc_argc, __libc_argv, __environ);
 }
 
 extern void *__dlopen_nocheck (const char *file, int mode);
@@ -71,7 +71,7 @@ __dlopen_nocheck (const char *file, int mode)
   args.mode = mode;
 
   if (!rtld_active ())
-    return _dlfcn_hook->dlopen (file, mode, RETURN_ADDRESS (0));
+    return GLRO (dl_dlfcn_hook)->dlopen (file, mode, RETURN_ADDRESS (0));
 
   return _dlerror_run (dlopen_doit, &args) ? NULL : args.new;
 }

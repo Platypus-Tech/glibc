@@ -741,6 +741,12 @@ GLIBC_2.2.6 dirfd F
 GLIBC_2.2.6 dirname F
 GLIBC_2.2.6 div F
 GLIBC_2.2.6 dl_iterate_phdr F
+GLIBC_2.2.6 dladdr F
+GLIBC_2.2.6 dlclose F
+GLIBC_2.2.6 dlerror F
+GLIBC_2.2.6 dlopen F
+GLIBC_2.2.6 dlsym F
+GLIBC_2.2.6 dlvsym F
 GLIBC_2.2.6 dngettext F
 GLIBC_2.2.6 dprintf F
 GLIBC_2.2.6 drand48 F
@@ -2140,6 +2146,8 @@ GLIBC_2.3.2 lchmod F
 GLIBC_2.3.2 setresgid F
 GLIBC_2.3.2 setresuid F
 GLIBC_2.3.2 strptime_l F
+GLIBC_2.3.3 dladdr1 F
+GLIBC_2.3.3 dlinfo F
 GLIBC_2.3.3 inet6_option_alloc F
 GLIBC_2.3.3 inet6_option_append F
 GLIBC_2.3.3 inet6_option_find F
@@ -2173,6 +2181,7 @@ GLIBC_2.3.4 __vprintf_chk F
 GLIBC_2.3.4 __vsnprintf_chk F
 GLIBC_2.3.4 __vsprintf_chk F
 GLIBC_2.3.4 __xpg_strerror_r F
+GLIBC_2.3.4 dlmopen F
 GLIBC_2.3.4 getipv4sourcefilter F
 GLIBC_2.3.4 getsourcefilter F
 GLIBC_2.3.4 regexec F
@@ -2207,6 +2216,15 @@ GLIBC_2.33 stat64 F
 GLIBC_2.34 __isnanf128 F
 GLIBC_2.34 __libc_start_main F
 GLIBC_2.34 _hurd_libc_proc_init F
+GLIBC_2.34 dladdr F
+GLIBC_2.34 dladdr1 F
+GLIBC_2.34 dlclose F
+GLIBC_2.34 dlerror F
+GLIBC_2.34 dlinfo F
+GLIBC_2.34 dlmopen F
+GLIBC_2.34 dlopen F
+GLIBC_2.34 dlsym F
+GLIBC_2.34 dlvsym F
 GLIBC_2.34 execveat F
 GLIBC_2.34 timespec_getres F
 GLIBC_2.4 __confstr_chk F

@@ -1,5 +1,5 @@
-/* Implementation and symbols for _IO_vfwscanf.
-   Copyright (C) 1991-2021 Free Software Foundation, Inc.
+/* Optimized memcmp implementation for POWER10.
+   Copyright (C) 2017-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,23 +16,11 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include <libioP.h>
-#include <shlib-compat.h>
+#define MEMCMP __memcmp_power10
 
-/* This function is provided for ports older than GLIBC 2.29 because
-   external callers could theoretically exist.  Newer ports do not need,
-   since it is not part of the API.  */
-#if SHLIB_COMPAT (libc, GLIBC_2_0, GLIBC_2_29)
+#undef libc_hidden_builtin_def
+#define libc_hidden_builtin_def(name)
+#undef weak_alias
+#define weak_alias(name,alias)
 
-int
-attribute_compat_text_section
-__IO_vfwscanf (FILE *fp, const wchar_t *format, va_list ap, int *errp)
-{
-  int rv = __vfwscanf_internal (fp, format, ap, 0);
-  if (__glibc_unlikely (errp != 0))
-    *errp = (rv == -1);
-  return rv;
-}
-compat_symbol (libc, __IO_vfwscanf, _IO_vfwscanf, GLIBC_2_0);
-
-#endif
+#include <sysdeps/powerpc/powerpc64/le/power10/memcmp.S>

@@ -1,3 +1,4 @@
+!libc_pre_versions
 libc {
   GLIBC_2.2 {
     ioperm; iopl;
@@ -14,17 +15,16 @@ libc {
     # w*
     wordexp;
   }
+  GLIBC_2.3.3 {
+    # Changed PTHREAD_STACK_MIN.
+    pthread_attr_setstack;
+    pthread_attr_setstacksize;
+  }
   GLIBC_2.2.6 {
     getunwind;
   }
   GLIBC_2.24 {
     recvmsg; sendmsg;
-  }
-}
-libpthread {
-  GLIBC_2.3.3 {
-    # Changed PTHREAD_STACK_MIN.
-    pthread_attr_setstack; pthread_attr_setstacksize;
   }
 }
 librt {

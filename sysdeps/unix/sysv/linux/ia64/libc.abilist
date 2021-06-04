@@ -1,3 +1,10 @@
+GLIBC_2.0 dladdr F
+GLIBC_2.0 dlclose F
+GLIBC_2.0 dlerror F
+GLIBC_2.0 dlopen F
+GLIBC_2.0 dlsym F
+GLIBC_2.1 dlopen F
+GLIBC_2.1 dlvsym F
 GLIBC_2.10 __cxa_at_quick_exit F
 GLIBC_2.10 __posix_getopt F
 GLIBC_2.10 accept4 F
@@ -2160,6 +2167,8 @@ GLIBC_2.3.3 __pthread_unregister_cancel F
 GLIBC_2.3.3 __pthread_unregister_cancel_restore F
 GLIBC_2.3.3 __pthread_unwind_next F
 GLIBC_2.3.3 _sys_siglist D 0x208
+GLIBC_2.3.3 dladdr1 F
+GLIBC_2.3.3 dlinfo F
 GLIBC_2.3.3 gnu_dev_major F
 GLIBC_2.3.3 gnu_dev_makedev F
 GLIBC_2.3.3 gnu_dev_minor F
@@ -2210,6 +2219,7 @@ GLIBC_2.3.4 __vprintf_chk F
 GLIBC_2.3.4 __vsnprintf_chk F
 GLIBC_2.3.4 __vsprintf_chk F
 GLIBC_2.3.4 __xpg_strerror_r F
+GLIBC_2.3.4 dlmopen F
 GLIBC_2.3.4 getipv4sourcefilter F
 GLIBC_2.3.4 getsourcefilter F
 GLIBC_2.3.4 pthread_attr_getaffinity_np F
@@ -2274,6 +2284,15 @@ GLIBC_2.34 cnd_init F
 GLIBC_2.34 cnd_signal F
 GLIBC_2.34 cnd_timedwait F
 GLIBC_2.34 cnd_wait F
+GLIBC_2.34 dladdr F
+GLIBC_2.34 dladdr1 F
+GLIBC_2.34 dlclose F
+GLIBC_2.34 dlerror F
+GLIBC_2.34 dlinfo F
+GLIBC_2.34 dlmopen F
+GLIBC_2.34 dlopen F
+GLIBC_2.34 dlsym F
+GLIBC_2.34 dlvsym F
 GLIBC_2.34 execveat F
 GLIBC_2.34 mtx_destroy F
 GLIBC_2.34 mtx_init F
