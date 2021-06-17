@@ -251,6 +251,7 @@ CFLAGS-pthread_clockjoin.c += -fexceptions -fasynchronous-unwind-tables
 CFLAGS-pthread_once.c += $(uses-callbacks) -fexceptions \
 			-fasynchronous-unwind-tables
 CFLAGS-pthread_cond_wait.c += -fexceptions -fasynchronous-unwind-tables
+CFLAGS-pthread_kill.c = -fexceptions -fasynchronous-unwind-tables
 CFLAGS-sem_wait.c += -fexceptions -fasynchronous-unwind-tables
 CFLAGS-sem_timedwait.c += -fexceptions -fasynchronous-unwind-tables
 CFLAGS-sem_clockwait.c = -fexceptions -fasynchronous-unwind-tables
@@ -323,6 +324,9 @@ tests-internal := tst-robustpi8 tst-rwlock19 tst-rwlock20 \
 xtests = tst-setuid1 tst-setuid1-static tst-setuid2 \
 	tst-mutexpp1 tst-mutexpp6 tst-mutexpp10 tst-setgroups \
 	tst-mutexpp5 tst-mutexpp9
+
+tests-time64 := \
+  tst-cancel4_2-time64
 
 # This test can run into task limits because of a linux kernel bug
 # and then cause the make process to fail too, see bug 24537.

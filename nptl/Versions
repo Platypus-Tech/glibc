@@ -260,6 +260,8 @@ libc {
     __pthread_unregister_cancel;
     __pthread_unregister_cancel_restore;
     __pthread_unwind_next;
+    _pthread_cleanup_pop;
+    _pthread_cleanup_push;
     call_once;
     cnd_broadcast;
     cnd_destroy;
@@ -403,7 +405,6 @@ libc {
     __nptl_free_tcb;
     __nptl_nthreads;
     __nptl_setxid_sighandler;
-    __nptl_sigcancel_handler;
     __nptl_stack_list_add;
     __nptl_stack_list_del;
     __pthread_attr_copy;

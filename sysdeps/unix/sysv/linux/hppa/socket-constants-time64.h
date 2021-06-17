@@ -1,5 +1,5 @@
-/* Call to terminate the current thread.  Stub version.
-   Copyright (C) 2014-2021 Free Software Foundation, Inc.
+/* Compat socket constants used in 64-bit compat code.
+   Copyright (C) 2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,13 +16,20 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-/* This causes the current thread to exit, without affecting other
-   threads in the process if there are any.  If there are no other
-   threads left, then this has the effect of _exit (0).  */
+#ifndef _SOCKET_CONSTANTS_TIME64_H
+#define _SOCKET_CONSTANTS_TIME64_H
 
-static inline void __attribute__ ((noreturn, always_inline, unused))
-__exit_thread (void)
-{
-  while (1)
-    asm ("write me!");
-}
+/* The compat code requires the SO_* constants used for both 32 and 64-bit
+   time_t, however they were only added on v5.1 kernel.  */
+
+#define COMPAT_SO_RCVTIMEO_OLD 4102
+#define COMPAT_SO_SNDTIMEO_OLD 4101
+#define COMPAT_SO_RCVTIMEO_NEW 16448
+#define COMPAT_SO_SNDTIMEO_NEW 16449
+
+#define COMPAT_SO_TIMESTAMP_OLD 0x4012
+#define COMPAT_SO_TIMESTAMPNS_OLD 0x4013
+#define COMPAT_SO_TIMESTAMP_NEW 0x4038
+#define COMPAT_SO_TIMESTAMPNS_NEW 0x4039
+
+#endif

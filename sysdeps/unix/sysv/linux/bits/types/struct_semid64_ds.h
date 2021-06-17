@@ -25,9 +25,6 @@
 #else
 struct __semid64_ds
 {
-  struct ipc_perm sem_perm;		/* operation permission struct */
-  __time64_t sem_otime;			/* last semop() time */
-  __time64_t sem_ctime;			/* last time changed by semctl() */
-  __syscall_ulong_t sem_nsems;		/* number of semaphores in set */
+# include <bits/types/struct_semid64_ds_helper.h>
 };
 #endif

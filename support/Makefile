@@ -40,7 +40,9 @@ libsupport-routines = \
   resolv_test \
   set_fortify_handler \
   support-xfstat \
+  support-xfstat-time64 \
   support-xstat \
+  support-xstat-time64 \
   support_become_root \
   support_can_chroot \
   support_capture_subprocess \
@@ -83,8 +85,11 @@ libsupport-routines = \
   support_test_verify_impl \
   temp_file \
   timespec \
+  timespec-time64 \
   timespec-add \
+  timespec-add-time64 \
   timespec-sub \
+  timespec-sub-time64 \
   write_message \
   xaccept \
   xaccept4 \
@@ -94,7 +99,9 @@ libsupport-routines = \
   xchdir \
   xchroot \
   xclock_gettime \
+  xclock_gettime_time64 \
   xclock_settime \
+  xclock_settime_time64 \
   xclose \
   xchmod \
   xconnect \
@@ -112,6 +119,7 @@ libsupport-routines = \
   xlisten \
   xlseek \
   xlstat \
+  xlstat-time64 \
   xmalloc \
   xmemstream \
   xmkdir \
@@ -216,6 +224,7 @@ CFLAGS-support_paths.c = \
 # in support_timespec_check_in_range and for that computation we use
 # -fexcess-precision=standard.
 CFLAGS-timespec.c += -fexcess-precision=standard
+CFLAGS-timespec-time64.c += -fexcess-precision=standard
 
 ifeq (,$(CXX))
 LINKS_DSO_PROGRAM = links-dso-program-c

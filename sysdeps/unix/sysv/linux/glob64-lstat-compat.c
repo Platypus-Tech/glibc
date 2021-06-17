@@ -33,15 +33,15 @@
 # define __glob __glob64_lstat_compat
 # define globfree globfree64
 
-# undef stat
-# define stat stat64
-
-# define COMPILE_GLOB64	1
-
 # define GLOB_ATTRIBUTE attribute_compat_text_section
 
 /* Avoid calling gl_lstat with GLOB_ALTDIRFUNC.  */
-# define GLOB_NO_LSTAT
+# define COMPILE_GLOB64	1
+# define struct_stat    struct stat64
+# define struct_stat64  struct stat64
+# define GLOB_LSTAT     gl_stat
+# define GLOB_STAT64    __stat64
+# define GLOB_LSTAT64   __stat64
 
 # include <posix/glob.c>
 

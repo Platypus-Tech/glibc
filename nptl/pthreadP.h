@@ -245,18 +245,6 @@ libc_hidden_proto (__pthread_current_priority)
 #define INVALID_TD_P(pd) __builtin_expect ((pd)->tid <= 0, 0)
 #define INVALID_NOT_TERMINATED_TD_P(pd) __builtin_expect ((pd)->tid < 0, 0)
 
-/* Cancellation test.  */
-#define CANCELLATION_P(self) \
-  do {									      \
-    int cancelhandling = THREAD_GETMEM (self, cancelhandling);		      \
-    if (CANCEL_ENABLED_AND_CANCELED (cancelhandling))			      \
-      {									      \
-	THREAD_SETMEM (self, result, PTHREAD_CANCELED);			      \
-	__do_cancel ();							      \
-      }									      \
-  } while (0)
-
-
 extern void __pthread_unwind (__pthread_unwind_buf_t *__buf)
      __cleanup_fct_attribute __attribute ((__noreturn__))
 #if !defined SHARED && !IS_IN (libpthread)
@@ -520,11 +508,15 @@ extern int __pthread_once (pthread_once_t *once_control,
 libc_hidden_proto (__pthread_once)
 extern int __pthread_atfork (void (*prepare) (void), void (*parent) (void),
 			     void (*child) (void));
-extern pthread_t __pthread_self (void);
+libc_hidden_proto (__pthread_self)
 extern int __pthread_equal (pthread_t thread1, pthread_t thread2);
 extern int __pthread_detach (pthread_t th);
 libc_hidden_proto (__pthread_detach)
 extern int __pthread_kill (pthread_t threadid, int signo);
+libc_hidden_proto (__pthread_kill)
+extern int __pthread_cancel (pthread_t th);
+extern int __pthread_kill_internal (pthread_t threadid, int signo)
+  attribute_hidden;
 extern void __pthread_exit (void *value) __attribute__ ((__noreturn__));
 libc_hidden_proto (__pthread_exit)
 extern int __pthread_join (pthread_t threadid, void **thread_return);
@@ -568,12 +560,6 @@ libc_hidden_proto (__pthread_attr_setsigmask_internal)
 
 extern __typeof (pthread_attr_getsigmask_np) __pthread_attr_getsigmask_np;
 libc_hidden_proto (__pthread_attr_getsigmask_np)
-
-/* The cancellation signal handler defined alongside with
-   pthread_cancel.  This is included in statically linked binaries
-   only if pthread_cancel is linked in.  */
-void __nptl_sigcancel_handler (int sig, siginfo_t *si, void *ctx);
-libc_hidden_proto (__nptl_sigcancel_handler)
 
 /* Special versions which use non-exported functions.  */
 extern void __pthread_cleanup_push (struct _pthread_cleanup_buffer *buffer,
