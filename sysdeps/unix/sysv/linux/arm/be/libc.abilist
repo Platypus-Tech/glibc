@@ -190,8 +190,10 @@ GLIBC_2.33 mknod F
 GLIBC_2.33 mknodat F
 GLIBC_2.33 stat F
 GLIBC_2.33 stat64 F
+GLIBC_2.34 _Fork F
 GLIBC_2.34 ___adjtimex64 F
 GLIBC_2.34 __adjtime64 F
+GLIBC_2.34 __aio_suspend_time64 F
 GLIBC_2.34 __clock_adjtime64 F
 GLIBC_2.34 __clock_getres64 F
 GLIBC_2.34 __clock_gettime64 F
@@ -225,6 +227,9 @@ GLIBC_2.34 __localtime64_r F
 GLIBC_2.34 __lstat64_time64 F
 GLIBC_2.34 __lutimes64 F
 GLIBC_2.34 __mktime64 F
+GLIBC_2.34 __mq_open_2 F
+GLIBC_2.34 __mq_timedreceive_time64 F
+GLIBC_2.34 __mq_timedsend_time64 F
 GLIBC_2.34 __msgctl64 F
 GLIBC_2.34 __mtx_timedlock64 F
 GLIBC_2.34 __nanosleep64 F
@@ -267,6 +272,8 @@ GLIBC_2.34 __stat64_time64 F
 GLIBC_2.34 __thrd_sleep64 F
 GLIBC_2.34 __time64 F
 GLIBC_2.34 __timegm64 F
+GLIBC_2.34 __timer_gettime64 F
+GLIBC_2.34 __timer_settime64 F
 GLIBC_2.34 __timerfd_gettime64 F
 GLIBC_2.34 __timerfd_settime64 F
 GLIBC_2.34 __timespec_get64 F
@@ -278,6 +285,21 @@ GLIBC_2.34 __wait3_time64 F
 GLIBC_2.34 __wait4_time64 F
 GLIBC_2.34 _pthread_cleanup_pop F
 GLIBC_2.34 _pthread_cleanup_push F
+GLIBC_2.34 aio_cancel F
+GLIBC_2.34 aio_cancel64 F
+GLIBC_2.34 aio_error F
+GLIBC_2.34 aio_error64 F
+GLIBC_2.34 aio_fsync F
+GLIBC_2.34 aio_fsync64 F
+GLIBC_2.34 aio_init F
+GLIBC_2.34 aio_read F
+GLIBC_2.34 aio_read64 F
+GLIBC_2.34 aio_return F
+GLIBC_2.34 aio_return64 F
+GLIBC_2.34 aio_suspend F
+GLIBC_2.34 aio_suspend64 F
+GLIBC_2.34 aio_write F
+GLIBC_2.34 aio_write64 F
 GLIBC_2.34 call_once F
 GLIBC_2.34 cnd_broadcast F
 GLIBC_2.34 cnd_destroy F
@@ -295,12 +317,30 @@ GLIBC_2.34 dlopen F
 GLIBC_2.34 dlsym F
 GLIBC_2.34 dlvsym F
 GLIBC_2.34 execveat F
+GLIBC_2.34 forkpty F
+GLIBC_2.34 lio_listio F
+GLIBC_2.34 lio_listio64 F
+GLIBC_2.34 login F
+GLIBC_2.34 login_tty F
+GLIBC_2.34 logout F
+GLIBC_2.34 logwtmp F
+GLIBC_2.34 mq_close F
+GLIBC_2.34 mq_getattr F
+GLIBC_2.34 mq_notify F
+GLIBC_2.34 mq_open F
+GLIBC_2.34 mq_receive F
+GLIBC_2.34 mq_send F
+GLIBC_2.34 mq_setattr F
+GLIBC_2.34 mq_timedreceive F
+GLIBC_2.34 mq_timedsend F
+GLIBC_2.34 mq_unlink F
 GLIBC_2.34 mtx_destroy F
 GLIBC_2.34 mtx_init F
 GLIBC_2.34 mtx_lock F
 GLIBC_2.34 mtx_timedlock F
 GLIBC_2.34 mtx_trylock F
 GLIBC_2.34 mtx_unlock F
+GLIBC_2.34 openpty F
 GLIBC_2.34 pthread_attr_getaffinity_np F
 GLIBC_2.34 pthread_attr_getguardsize F
 GLIBC_2.34 pthread_attr_getstack F
@@ -397,10 +437,17 @@ GLIBC_2.34 sem_timedwait F
 GLIBC_2.34 sem_trywait F
 GLIBC_2.34 sem_unlink F
 GLIBC_2.34 sem_wait F
+GLIBC_2.34 shm_open F
+GLIBC_2.34 shm_unlink F
 GLIBC_2.34 thrd_create F
 GLIBC_2.34 thrd_detach F
 GLIBC_2.34 thrd_exit F
 GLIBC_2.34 thrd_join F
+GLIBC_2.34 timer_create F
+GLIBC_2.34 timer_delete F
+GLIBC_2.34 timer_getoverrun F
+GLIBC_2.34 timer_gettime F
+GLIBC_2.34 timer_settime F
 GLIBC_2.34 timespec_getres F
 GLIBC_2.34 tss_create F
 GLIBC_2.34 tss_delete F
@@ -979,6 +1026,21 @@ GLIBC_2.4 addseverity F
 GLIBC_2.4 adjtime F
 GLIBC_2.4 adjtimex F
 GLIBC_2.4 advance F
+GLIBC_2.4 aio_cancel F
+GLIBC_2.4 aio_cancel64 F
+GLIBC_2.4 aio_error F
+GLIBC_2.4 aio_error64 F
+GLIBC_2.4 aio_fsync F
+GLIBC_2.4 aio_fsync64 F
+GLIBC_2.4 aio_init F
+GLIBC_2.4 aio_read F
+GLIBC_2.4 aio_read64 F
+GLIBC_2.4 aio_return F
+GLIBC_2.4 aio_return64 F
+GLIBC_2.4 aio_suspend F
+GLIBC_2.4 aio_suspend64 F
+GLIBC_2.4 aio_write F
+GLIBC_2.4 aio_write64 F
 GLIBC_2.4 alarm F
 GLIBC_2.4 alphasort F
 GLIBC_2.4 alphasort64 F
@@ -1234,6 +1296,7 @@ GLIBC_2.4 fopen F
 GLIBC_2.4 fopen64 F
 GLIBC_2.4 fopencookie F
 GLIBC_2.4 fork F
+GLIBC_2.4 forkpty F
 GLIBC_2.4 fpathconf F
 GLIBC_2.4 fprintf F
 GLIBC_2.4 fputc F
@@ -1610,6 +1673,8 @@ GLIBC_2.4 lfind F
 GLIBC_2.4 lgetxattr F
 GLIBC_2.4 link F
 GLIBC_2.4 linkat F
+GLIBC_2.4 lio_listio F
+GLIBC_2.4 lio_listio64 F
 GLIBC_2.4 listen F
 GLIBC_2.4 listxattr F
 GLIBC_2.4 llabs F
@@ -1624,6 +1689,10 @@ GLIBC_2.4 localtime_r F
 GLIBC_2.4 lockf F
 GLIBC_2.4 lockf64 F
 GLIBC_2.4 locs D 0x4
+GLIBC_2.4 login F
+GLIBC_2.4 login_tty F
+GLIBC_2.4 logout F
+GLIBC_2.4 logwtmp F
 GLIBC_2.4 longjmp F
 GLIBC_2.4 lrand48 F
 GLIBC_2.4 lrand48_r F
@@ -1689,6 +1758,16 @@ GLIBC_2.4 monstartup F
 GLIBC_2.4 mount F
 GLIBC_2.4 mprobe F
 GLIBC_2.4 mprotect F
+GLIBC_2.4 mq_close F
+GLIBC_2.4 mq_getattr F
+GLIBC_2.4 mq_notify F
+GLIBC_2.4 mq_open F
+GLIBC_2.4 mq_receive F
+GLIBC_2.4 mq_send F
+GLIBC_2.4 mq_setattr F
+GLIBC_2.4 mq_timedreceive F
+GLIBC_2.4 mq_timedsend F
+GLIBC_2.4 mq_unlink F
 GLIBC_2.4 mrand48 F
 GLIBC_2.4 mrand48_r F
 GLIBC_2.4 mremap F
@@ -1733,6 +1812,7 @@ GLIBC_2.4 openat F
 GLIBC_2.4 openat64 F
 GLIBC_2.4 opendir F
 GLIBC_2.4 openlog F
+GLIBC_2.4 openpty F
 GLIBC_2.4 optarg D 0x4
 GLIBC_2.4 opterr D 0x4
 GLIBC_2.4 optind D 0x4
@@ -2101,6 +2181,8 @@ GLIBC_2.4 setvbuf F
 GLIBC_2.4 setxattr F
 GLIBC_2.4 sgetspent F
 GLIBC_2.4 sgetspent_r F
+GLIBC_2.4 shm_open F
+GLIBC_2.4 shm_unlink F
 GLIBC_2.4 shmat F
 GLIBC_2.4 shmctl F
 GLIBC_2.4 shmdt F
@@ -2288,6 +2370,11 @@ GLIBC_2.4 tfind F
 GLIBC_2.4 time F
 GLIBC_2.4 timegm F
 GLIBC_2.4 timelocal F
+GLIBC_2.4 timer_create F
+GLIBC_2.4 timer_delete F
+GLIBC_2.4 timer_getoverrun F
+GLIBC_2.4 timer_gettime F
+GLIBC_2.4 timer_settime F
 GLIBC_2.4 times F
 GLIBC_2.4 timezone D 0x4
 GLIBC_2.4 tmpfile F
@@ -2557,6 +2644,7 @@ GLIBC_2.7 __isoc99_vsscanf F
 GLIBC_2.7 __isoc99_vswscanf F
 GLIBC_2.7 __isoc99_vwscanf F
 GLIBC_2.7 __isoc99_wscanf F
+GLIBC_2.7 __mq_open_2 F
 GLIBC_2.7 __open64_2 F
 GLIBC_2.7 __open_2 F
 GLIBC_2.7 __openat64_2 F

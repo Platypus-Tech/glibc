@@ -16,10 +16,12 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
+#define NO_MATH_REDIRECT
 #include <math.h>
 #include <math_private.h>
 #include <libm-alias-double.h>
 #include <stdint.h>
+#include <math-use-builtins.h>
 
 #define BIAS 0x3ff
 #define MANT_DIG 53
@@ -28,6 +30,9 @@
 double
 __roundeven (double x)
 {
+#if USE_ROUNDEVEN_BUILTIN
+  return __builtin_roundeven (x);
+#else
   uint64_t ix, ux;
   EXTRACT_WORDS64 (ix, x);
   ux = ix & 0x7fffffffffffffffULL;
@@ -65,6 +70,8 @@ __roundeven (double x)
     ix &= 0x8000000000000000ULL;
   INSERT_WORDS64 (x, ix);
   return x;
+#endif /* ! USE_ROUNDEVEN_BUILTIN  */
 }
-hidden_def (__roundeven)
+#ifndef __roundeven
 libm_alias_double (__roundeven, roundeven)
+#endif

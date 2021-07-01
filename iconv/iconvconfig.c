@@ -18,7 +18,6 @@
 
 #include <argp.h>
 #include <assert.h>
-#include <dirent.h>
 #include <error.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -34,10 +33,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/cdefs.h>
-#include <sys/types.h>
 #include <sys/uio.h>
 
 #include "iconvconfig.h"
+#include <gconv_parseconfdir.h>
 
 /* Get libc version number.  */
 #include "../version.h"
@@ -251,6 +250,7 @@ static const char gconv_module_ext[] = MODULE_EXT;
 
 
 #include <programs/xmalloc.h>
+#include <programs/xasprintf.h>
 
 
 /* C string table handling.  */
@@ -520,11 +520,12 @@ module_compare (const void *p1, const void *p2)
 /* Create new module record.  */
 static void
 new_module (const char *fromname, size_t fromlen, const char *toname,
-	    size_t tolen, const char *directory,
+	    size_t tolen, const char *dir_in,
 	    const char *filename, size_t filelen, int cost, size_t need_ext)
 {
   struct module *new_module;
-  size_t dirlen = strlen (directory) + 1;
+  size_t dirlen = strlen (dir_in) + 1;
+  const char *directory = xstrdup (dir_in);
   char *tmp;
   void **inserted;
 
@@ -568,7 +569,9 @@ new_module (const char *fromname, size_t fromlen, const char *toname,
 
 /* Add new module.  */
 static void
-add_module (char *rp, const char *directory)
+add_module (char *rp, const char *directory,
+	    size_t dirlen __attribute__ ((__unused__)),
+	    int modcount __attribute__ ((__unused__)))
 {
   /* We expect now
      1. `from' name
@@ -646,125 +649,17 @@ add_module (char *rp, const char *directory)
 	      cost, need_ext);
 }
 
-/* Read a gconv-modules configuration file.  */
-static bool
-handle_file (const char *dir, const char *infile)
-{
-  FILE *fp;
-  char *line = NULL;
-  size_t linelen = 0;
-
-  fp = fopen (infile, "r");
-  if (fp == NULL)
-    return false;
-
-  /* No threads present.  */
-  __fsetlocking (fp, FSETLOCKING_BYCALLER);
-
-  while (!feof_unlocked (fp))
-    {
-      char *rp, *endp, *word;
-      ssize_t n = __getdelim (&line, &linelen, '\n', fp);
-
-      if (n < 0)
-	/* An error occurred.  */
-	break;
-
-      rp = line;
-      /* Terminate the line (excluding comments or newline) with a NUL
-	 byte to simplify the following code.  */
-      endp = strchr (rp, '#');
-      if (endp != NULL)
-	*endp = '\0';
-      else
-	if (rp[n - 1] == '\n')
-	  rp[n - 1] = '\0';
-
-      while (isspace (*rp))
-	++rp;
-
-      /* If this is an empty line go on with the next one.  */
-      if (rp == endp)
-	continue;
-
-      word = rp;
-      while (*rp != '\0' && !isspace (*rp))
-	++rp;
-
-      if (rp - word == sizeof ("alias") - 1
-	  && memcmp (word, "alias", sizeof ("alias") - 1) == 0)
-	add_alias (rp);
-      else if (rp - word == sizeof ("module") - 1
-	       && memcmp (word, "module", sizeof ("module") - 1) == 0)
-	add_module (rp, dir);
-      /* else */
-	/* Otherwise ignore the line.  */
-    }
-
-  free (line);
-
-  fclose (fp);
-
-  return true;
-}
-
 /* Read config files and add the data for this directory to cache.  */
 static int
 handle_dir (const char *dir)
 {
-#define BUF_LEN prefix_len + dirlen + sizeof "gconv-modules.d"
-  char *cp;
   size_t dirlen = strlen (dir);
   bool found = false;
 
-  if (dir[dirlen - 1] != '/')
-    {
-      char *newp = (char *) xmalloc (dirlen + 2);
-      dir = memcpy (newp, dir, dirlen);
-      newp[dirlen++] = '/';
-      newp[dirlen] = '\0';
-    }
+  char *fulldir = xasprintf ("%s%s%s", dir[0] == '/' ? prefix : "",
+			     dir, dir[dirlen - 1] != '/' ? "/" : "");
 
-  /* First, look for a gconv-modules file.  */
-  char buf[BUF_LEN];
-  cp = buf;
-  if (dir[0] == '/')
-    cp = mempcpy (cp, prefix, prefix_len);
-  cp = mempcpy (cp, dir, dirlen);
-  cp = stpcpy (cp, "gconv-modules");
-
-  found |= handle_file (dir, buf);
-
-  /* Next, see if there is a gconv-modules.d directory containing configuration
-     files and if it is non-empty.  */
-  cp[0] = '.';
-  cp[1] = 'd';
-  cp[2] = '\0';
-
-  DIR *confdir = opendir (buf);
-  if (confdir != NULL)
-    {
-      struct dirent *ent;
-      while ((ent = readdir (confdir)) != NULL)
-	{
-	  if (ent->d_type != DT_REG)
-	    continue;
-
-	  size_t len = strlen (ent->d_name);
-	  const char *suffix = ".conf";
-
-	  if (len > strlen (suffix)
-	      && strcmp (ent->d_name + len - strlen (suffix), suffix) == 0)
-	    {
-	      /* LEN <= PATH_MAX so this alloca is not unbounded.  */
-	      char *conf = alloca (BUF_LEN + len + 1);
-	      cp = stpcpy (conf, buf);
-	      sprintf (cp, "/%s", ent->d_name);
-	      found |= handle_file (dir, conf);
-	    }
-	}
-      closedir (confdir);
-    }
+  found = gconv_parseconfdir (fulldir, strlen (fulldir));
 
   if (!found)
     {
@@ -775,6 +670,8 @@ handle_dir (const char *dir)
 	     "gconv-modules file or a gconv-modules.d directory with "
 	     "configuration files with names ending in .conf.");
     }
+
+  free (fulldir);
 
   return found ? 0 : 1;
 }

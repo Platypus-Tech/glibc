@@ -34,10 +34,31 @@ Major new features:
 * On powerpc64*, glibc can now be compiled without scv support using the
   --disable-scv configure option.
 
-* Add support for 64-bit time_t for ABIs with defaults to 32-bit time_t.
+* Add support for 64-bit time_t on configurations like x86 where time_t
+  is traditionally 32-bit.  Although time_t still defaults to 32-bit on
+  these configurations, this default may change in future versions.
   This is enabled with the _TIME_BITS preprocessor set to 64 and only
   supported when LFS (_FILE_OFFSET_BITS=64) is also enabled.  It is only
   enabled for Linux and the full support requires a minimum version of 5.1.
+
+* The main gconv-modules file in glibc now contains only a small set of
+  essential converter modules and the rest have been moved into a supplementary
+  configuration file gconv-modules-extra.conf in the gconv-modules.d directory
+  in the same GCONV_PATH.  Similarly, external converter modules directories
+  may have supplementary configuration files in a gconv-modules.d directory
+  with names ending with .conf to logically classify the converter modules in
+  that directory.
+
+* On Linux, a new tunable, glibc.pthread.stack_cache_size, can be used
+  to configure the size of the thread stack cache.
+
+* The function _Fork has been added as an async-signal-safe fork replacement
+  since Austin Group issue 62 droped the async-signal-safe requirement for
+  fork (and it will be included in the future POSIX standard).  The new _Fork
+  function does not run any atfork function neither resets any internal state
+  or lock (such as the malloc one), and only sets up a minimal state required
+  to call async-signal-safe functions (such as raise or execve).  This function
+  is currently a GNU extension.
 
 Deprecated and removed features, and other changes affecting compatibility:
 
@@ -55,6 +76,22 @@ Deprecated and removed features, and other changes affecting compatibility:
 
 * The function pthread_yield has been deprecated; programs should use
   the equivalent standard function sched_yield instead.
+
+* The pthread cancellation handler is now installed with SA_RESTART and
+  pthread_cancel will always send the internal SIGCANCEL on a cancellation
+  request.  It should not be visible to application since the cancellation
+  handler should either act upon cancellation (if asynchronous cancellation
+  is enabled) or ignore the cancellation internal signal.  However there are
+  buggy kernel interfaces (for instance some CIFS version) that could still
+  see spurious EINTR error when cancellation interrupts a blocking syscall.
+
+* Previously, glibc installed its various shared objects under versioned
+  file names such as libc-2.33.so.  The ABI sonames (e.g., libc.so.6)
+  were provided as symbolic links.  Starting with glibc 2.34, the shared
+  objects are installed under their ABI sonames directly, without
+  symbolic links.  This increases compatibility with distribution
+  package managers that delete removed files late during the package
+  upgrade or downgrade process.
 
 Changes to build and runtime requirements:
 

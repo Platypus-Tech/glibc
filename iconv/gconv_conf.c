@@ -19,7 +19,6 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <dirent.h>
 #include <errno.h>
 #include <limits.h>
 #include <locale.h>
@@ -31,11 +30,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/param.h>
-#include <sys/types.h>
 
 #include <libc-lock.h>
 #include <gconv_int.h>
-
+#include <gconv_parseconfdir.h>
 
 /* This is the default path where we look for module lists.  */
 static const char default_gconv_path[] = GCONV_PATH;
@@ -55,11 +53,6 @@ size_t __gconv_max_path_elem_len;
 
 /* We use the following struct if we couldn't allocate memory.  */
 static const struct path_elem empty_path_elem = { NULL, 0 };
-
-/* Name of the file containing the module information in the directories
-   along the path.  */
-static const char gconv_conf_filename[] = "gconv-modules";
-static const char gconv_conf_dirname[] = "gconv-modules.d";
 
 /* Filename extension for the modules.  */
 #ifndef MODULE_EXT
@@ -99,9 +92,6 @@ static const char builtin_aliases[] =
 #undef BUILTIN_ALIAS
 };
 
-#include <libio/libioP.h>
-#define __getdelim(line, len, c, fp) _IO_getdelim (line, len, c, fp)
-
 
 /* Value of the GCONV_PATH environment variable.  */
 const char *__gconv_path_envvar;
@@ -132,7 +122,7 @@ detect_conflict (const char *alias)
 
 /* The actual code to add aliases.  */
 static void
-add_alias2 (const char *from, const char *to, const char *wp, void *modules)
+add_alias2 (const char *from, const char *to, const char *wp)
 {
   /* Test whether this alias conflicts with any available module.  */
   if (detect_conflict (from))
@@ -161,7 +151,7 @@ add_alias2 (const char *from, const char *to, const char *wp, void *modules)
 
 /* Add new alias.  */
 static void
-add_alias (char *rp, void *modules)
+add_alias (char *rp)
 {
   /* We now expect two more string.  The strings are normalized
      (converted to UPPER case) and strored in the alias database.  */
@@ -186,7 +176,7 @@ add_alias (char *rp, void *modules)
     return;
   *wp++ = '\0';
 
-  add_alias2 (from, to, wp, modules);
+  add_alias2 (from, to, wp);
 }
 
 
@@ -250,8 +240,7 @@ insert_module (struct gconv_module *newp, int tobefreed)
 
 /* Add new module.  */
 static void
-add_module (char *rp, const char *directory, size_t dir_len, void **modules,
-	    size_t *nmodules, int modcounter)
+add_module (char *rp, const char *directory, size_t dir_len, int modcounter)
 {
   /* We expect now
      1. `from' name
@@ -359,73 +348,6 @@ add_module (char *rp, const char *directory, size_t dir_len, void **modules,
       /* Now insert the new module data structure in our search tree.  */
       insert_module (new_module, 1);
     }
-}
-
-
-/* Read the next configuration file.  */
-static void
-read_conf_file (const char *filename, const char *directory, size_t dir_len,
-		void **modules, size_t *nmodules)
-{
-  /* Note the file is opened with cancellation in the I/O functions
-     disabled.  */
-  FILE *fp = fopen (filename, "rce");
-  char *line = NULL;
-  size_t line_len = 0;
-  static int modcounter;
-
-  /* Don't complain if a file is not present or readable, simply silently
-     ignore it.  */
-  if (fp == NULL)
-    return;
-
-  /* No threads reading from this stream.  */
-  __fsetlocking (fp, FSETLOCKING_BYCALLER);
-
-  /* Process the known entries of the file.  Comments start with `#' and
-     end with the end of the line.  Empty lines are ignored.  */
-  while (!__feof_unlocked (fp))
-    {
-      char *rp, *endp, *word;
-      ssize_t n = __getdelim (&line, &line_len, '\n', fp);
-      if (n < 0)
-	/* An error occurred.  */
-	break;
-
-      rp = line;
-      /* Terminate the line (excluding comments or newline) by an NUL byte
-	 to simplify the following code.  */
-      endp = strchr (rp, '#');
-      if (endp != NULL)
-	*endp = '\0';
-      else
-	if (rp[n - 1] == '\n')
-	  rp[n - 1] = '\0';
-
-      while (__isspace_l (*rp, _nl_C_locobj_ptr))
-	++rp;
-
-      /* If this is an empty line go on with the next one.  */
-      if (rp == endp)
-	continue;
-
-      word = rp;
-      while (*rp != '\0' && !__isspace_l (*rp, _nl_C_locobj_ptr))
-	++rp;
-
-      if (rp - word == sizeof ("alias") - 1
-	  && memcmp (word, "alias", sizeof ("alias") - 1) == 0)
-	add_alias (rp, *modules);
-      else if (rp - word == sizeof ("module") - 1
-	       && memcmp (word, "module", sizeof ("module") - 1) == 0)
-	add_module (rp, directory, dir_len, modules, nmodules, modcounter++);
-      /* else */
-	/* Otherwise ignore the line.  */
-    }
-
-  free (line);
-
-  fclose (fp);
 }
 
 
@@ -540,8 +462,6 @@ __gconv_get_path (void)
 static void
 __gconv_read_conf (void)
 {
-  void *modules = NULL;
-  size_t nmodules = 0;
   int save_errno = errno;
   size_t cnt;
 
@@ -558,54 +478,8 @@ __gconv_read_conf (void)
   __gconv_get_path ();
 
   for (cnt = 0; __gconv_path_elem[cnt].name != NULL; ++cnt)
-    {
-#define BUF_LEN elem_len + sizeof (gconv_conf_dirname)
-
-      const char *elem = __gconv_path_elem[cnt].name;
-      size_t elem_len = __gconv_path_elem[cnt].len;
-      char *buf;
-
-      /* No slash needs to be inserted between elem and gconv_conf_filename;
-	 elem already ends in a slash.  */
-      buf = alloca (BUF_LEN);
-      char *cp = __mempcpy (__mempcpy (buf, elem, elem_len),
-			    gconv_conf_filename, sizeof (gconv_conf_filename));
-
-      /* Read the gconv-modules configuration file first.  */
-      read_conf_file (buf, elem, elem_len, &modules, &nmodules);
-
-      /* Next, see if there is a gconv-modules.d directory containing
-	 configuration files and if it is non-empty.  */
-      cp--;
-      cp[0] = '.';
-      cp[1] = 'd';
-      cp[2] = '\0';
-
-      DIR *confdir = __opendir (buf);
-      if (confdir != NULL)
-	{
-	  struct dirent *ent;
-	  while ((ent = __readdir (confdir)) != NULL)
-	    {
-	      if (ent->d_type != DT_REG)
-		continue;
-
-	      size_t len = strlen (ent->d_name);
-	      const char *suffix = ".conf";
-
-	      if (len > strlen (suffix)
-		  && strcmp (ent->d_name + len - strlen (suffix), suffix) == 0)
-		{
-		  /* LEN <= PATH_MAX so this alloca is not unbounded.  */
-		  char *conf = alloca (BUF_LEN + len + 1);
-		  cp = stpcpy (conf, buf);
-		  sprintf (cp, "/%s", ent->d_name);
-		  read_conf_file (conf, elem, elem_len, &modules, &nmodules);
-		}
-	    }
-	  __closedir (confdir);
-	}
-    }
+    gconv_parseconfdir (__gconv_path_elem[cnt].name,
+			__gconv_path_elem[cnt].len);
 #endif
 
   /* Add the internal modules.  */
@@ -632,7 +506,7 @@ __gconv_read_conf (void)
       const char *to = __rawmemchr (from, '\0') + 1;
       cp = __rawmemchr (to, '\0') + 1;
 
-      add_alias2 (from, to, cp, modules);
+      add_alias2 (from, to, cp);
     }
   while (*cp != '\0');
 

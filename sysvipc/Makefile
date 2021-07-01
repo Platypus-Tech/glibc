@@ -38,3 +38,6 @@ include ../Rules
 
 CFLAGS-msgrcv.c += -fexceptions -fasynchronous-unwind-tables
 CFLAGS-msgsnd.c += -fexceptions -fasynchronous-unwind-tables
+
+$(objpfx)test-sysvsem: $(librt)
+$(objpfx)test-sysvsem-time64: $(librt)

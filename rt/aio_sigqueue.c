@@ -28,5 +28,4 @@ __aio_sigqueue (int sig, const union sigval val, pid_t caller_pid)
   __set_errno (ENOSYS);
   return -1;
 }
-
 stub_warning (__aio_sigqueue)

@@ -24,22 +24,50 @@ include ../Makeconfig
 
 headers	:= aio.h mqueue.h bits/mqueue.h bits/mqueue2.h
 
-aio-routines   := aio_cancel aio_error aio_fsync aio_misc aio_read	\
-		  aio_read64 aio_return aio_suspend aio_write		\
-		  aio_write64 lio_listio lio_listio64 aio_sigqueue	\
-		  aio_notify
-timer-routines := timer_create timer_delete timer_getoverr		\
-		  timer_gettime timer_settime
-shm-routines   := shm_open shm_unlink
-mq-routines    := mq_open mq_close mq_unlink mq_getattr mq_setattr	\
-		  mq_notify mq_send mq_receive mq_timedsend		\
-		  mq_timedreceive
+routines = \
+  shm_open \
+  shm_unlink \
 
-librt-routines = $(aio-routines) \
-		 $(timer-routines) \
-		 $(shm-routines) $(mq-routines)
+librt-routines = librt-compat
+librt-shared-only-routines = librt-compat
 
-$(librt-routines-var) = \
+$(librt-routines-var) += \
+  aio_cancel \
+  aio_error \
+  aio_fsync \
+  aio_misc \
+  aio_notify \
+  aio_read \
+  aio_read64 \
+  aio_return \
+  aio_sigqueue \
+  aio_suspend \
+  aio_write \
+  aio_write64 \
+  lio_listio \
+  lio_listio64 \
+  mq_close \
+  mq_getattr \
+  mq_notify \
+  mq_open \
+  mq_receive \
+  mq_send \
+  mq_setattr \
+  mq_timedreceive \
+  mq_timedsend \
+  mq_unlink \
+  timer_create \
+  timer_delete \
+  timer_getoverr \
+  timer_gettime \
+  timer_settime \
+
+ifeq ($(pthread-in-libc),yes)
+# Pretend that librt.so is a linker script, so that the symbolic
+# link is not installed.
+install-lib-ldscripts = librt.so
+$(inst_libdir)/librt.so:
+endif
 
 tests := tst-shm tst-timer tst-timer2 \
 	 tst-aio tst-aio64 tst-aio2 tst-aio3 tst-aio4 tst-aio5 tst-aio6 \
@@ -48,7 +76,8 @@ tests := tst-shm tst-timer tst-timer2 \
 	 tst-mqueue5 tst-mqueue6 tst-mqueue7 tst-mqueue8 tst-mqueue9 \
 	 tst-timer3 tst-timer4 tst-timer5 \
 	 tst-cpuclock2 tst-cputimer1 tst-cputimer2 tst-cputimer3 \
-	 tst-shm-cancel
+	 tst-shm-cancel \
+	 tst-mqueue10
 tests-internal := tst-timer-sigmask
 
 tests-time64 := \
@@ -58,6 +87,7 @@ tests-time64 := \
   tst-mqueue2-time64 \
   tst-mqueue4-time64 \
   tst-mqueue8-time64 \
+  tst-mqueue10-time64 \
   tst-timer4-time64
 
 extra-libs := librt
@@ -73,6 +103,7 @@ LDFLAGS-rt.so = -Wl,--enable-new-dtags,-z,nodelete
 
 $(objpfx)librt.so: $(shared-thread-library)
 
+ifneq ($(pthread-in-libc),yes)
 ifeq (yes,$(build-shared))
 $(addprefix $(objpfx),$(tests) $(tests-internal)): \
 	$(objpfx)librt.so $(shared-thread-library)
@@ -80,5 +111,6 @@ else
 $(addprefix $(objpfx),$(tests)) $(tests-internal): \
 	$(objpfx)librt.a $(static-thread-library)
 endif
+endif # !$(pthread-in-libc)
 
 tst-mqueue7-ARGS = -- $(host-test-program-cmd)

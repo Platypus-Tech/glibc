@@ -223,7 +223,8 @@ tests += restest1 preloadtest loadfail multiload origtest resolvfail \
 	 tst-single_threaded tst-single_threaded-pthread \
 	 tst-tls-ie tst-tls-ie-dlmopen argv0test \
 	 tst-glibc-hwcaps tst-glibc-hwcaps-prepend tst-glibc-hwcaps-mask \
-	 tst-tls20 tst-tls21 tst-dlmopen-dlerror
+	 tst-tls20 tst-tls21 tst-dlmopen-dlerror tst-dlmopen-gethostbyname \
+	 tst-dl-is_dso
 #	 reldep9
 tests-internal += loadtest unload unload2 circleload1 \
 	 neededtest neededtest2 neededtest3 neededtest4 \
@@ -347,6 +348,7 @@ modules-names = testobj1 testobj2 testobj3 testobj4 testobj5 testobj6 \
 		libmarkermod4-1 libmarkermod4-2 libmarkermod4-3 libmarkermod4-4 \
 		tst-tls20mod-bad tst-tls21mod tst-dlmopen-dlerror-mod \
 		tst-auxvalmod \
+		tst-dlmopen-gethostbyname-mod \
 
 # Most modules build with _ISOMAC defined, but those filtered out
 # depend on internal headers.
@@ -628,20 +630,14 @@ $(objpfx)trusted-dirs.st: Makefile $(..)Makeconfig
 CPPFLAGS-dl-load.c += -I$(objpfx). -I$(csu-objpfx).
 
 ifeq (yes,$(build-shared))
-$(inst_slibdir)/$(rtld-version-installed-name): $(objpfx)ld.so $(+force)
+$(inst_rtlddir)/$(rtld-installed-name): $(objpfx)ld.so $(+force)
 	$(make-target-directory)
 	$(do-install-program)
-
-$(inst_rtlddir)/$(rtld-installed-name): \
-  $(inst_slibdir)/$(rtld-version-installed-name) \
-  $(inst_slibdir)/libc-$(version).so
-	$(make-target-directory)
-	$(make-shlib-link)
 
 # Special target called by parent to install just the dynamic linker.
 .PHONY: ldso_install
 ldso_install: $(inst_rtlddir)/$(rtld-installed-name)
-endif
+endif # $(build-shared)
 
 
 # Workarounds for ${exec_prefix} expansion in configure variables.
@@ -1178,7 +1174,6 @@ localplt-built-dso := $(addprefix $(common-objpfx),\
 				  libc.so \
 				  elf/ld.so \
 				  math/libm.so \
-				  rt/librt.so \
 				  dlfcn/libdl.so \
 				  resolv/libresolv.so \
 		       )
@@ -1190,6 +1185,9 @@ localplt-built-dso += $(filter-out %_nonshared.a, $(shared-thread-library))
 endif
 ifeq ($(build-crypt),yes)
 localplt-built-dso += $(addprefix $(common-objpfx), crypt/libcrypt.so)
+endif
+ifneq ($(pthread-in-libc),yes)
+localplt-built-dso += $(addprefix $(common-objpfx), rt/librt.so)
 endif
 
 vpath localplt.data $(+sysdep_dirs)
@@ -1832,3 +1830,5 @@ $(objpfx)tst-tls21mod.so: $(tst-tls-many-dynamic-modules:%=$(objpfx)%.so)
 
 $(objpfx)tst-getauxval-static.out: $(objpfx)tst-auxvalmod.so
 tst-getauxval-static-ENV = LD_LIBRARY_PATH=$(objpfx):$(common-objpfx)
+
+$(objpfx)tst-dlmopen-gethostbyname.out: $(objpfx)tst-dlmopen-gethostbyname-mod.so

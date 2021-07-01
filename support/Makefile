@@ -50,6 +50,7 @@ libsupport-routines = \
   support_chroot \
   support_copy_file \
   support_copy_file_range \
+  support_create_timer \
   support_descriptor_supports_holes \
   support_descriptors \
   support_enter_mount_namespace \
@@ -102,6 +103,7 @@ libsupport-routines = \
   xclock_gettime_time64 \
   xclock_settime \
   xclock_settime_time64 \
+  xclone \
   xclose \
   xchmod \
   xconnect \

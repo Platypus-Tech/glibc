@@ -863,6 +863,7 @@ GLIBC_2.2.6 fopen64 F
 GLIBC_2.2.6 fopencookie F
 GLIBC_2.2.6 fopenport F
 GLIBC_2.2.6 fork F
+GLIBC_2.2.6 forkpty F
 GLIBC_2.2.6 fpathconf F
 GLIBC_2.2.6 fprintf F
 GLIBC_2.2.6 fputc F
@@ -1215,6 +1216,10 @@ GLIBC_2.2.6 localtime_r F
 GLIBC_2.2.6 lockf F
 GLIBC_2.2.6 lockf64 F
 GLIBC_2.2.6 locs D 0x4
+GLIBC_2.2.6 login F
+GLIBC_2.2.6 login_tty F
+GLIBC_2.2.6 logout F
+GLIBC_2.2.6 logwtmp F
 GLIBC_2.2.6 longjmp F
 GLIBC_2.2.6 lrand48 F
 GLIBC_2.2.6 lrand48_r F
@@ -1337,6 +1342,7 @@ GLIBC_2.2.6 open_memstream F
 GLIBC_2.2.6 opendir F
 GLIBC_2.2.6 openlog F
 GLIBC_2.2.6 openport F
+GLIBC_2.2.6 openpty F
 GLIBC_2.2.6 optarg D 0x4
 GLIBC_2.2.6 opterr D 0x4
 GLIBC_2.2.6 optind D 0x4
@@ -1566,6 +1572,8 @@ GLIBC_2.2.6 setutxent F
 GLIBC_2.2.6 setvbuf F
 GLIBC_2.2.6 sgetspent F
 GLIBC_2.2.6 sgetspent_r F
+GLIBC_2.2.6 shm_open F
+GLIBC_2.2.6 shm_unlink F
 GLIBC_2.2.6 shmat F
 GLIBC_2.2.6 shmctl F
 GLIBC_2.2.6 shmdt F
@@ -2213,6 +2221,7 @@ GLIBC_2.33 mknod F
 GLIBC_2.33 mknodat F
 GLIBC_2.33 stat F
 GLIBC_2.33 stat64 F
+GLIBC_2.34 _Fork F
 GLIBC_2.34 __isnanf128 F
 GLIBC_2.34 __libc_start_main F
 GLIBC_2.34 _hurd_libc_proc_init F
@@ -2226,6 +2235,14 @@ GLIBC_2.34 dlopen F
 GLIBC_2.34 dlsym F
 GLIBC_2.34 dlvsym F
 GLIBC_2.34 execveat F
+GLIBC_2.34 forkpty F
+GLIBC_2.34 login F
+GLIBC_2.34 login_tty F
+GLIBC_2.34 logout F
+GLIBC_2.34 logwtmp F
+GLIBC_2.34 openpty F
+GLIBC_2.34 shm_open F
+GLIBC_2.34 shm_unlink F
 GLIBC_2.34 timespec_getres F
 GLIBC_2.4 __confstr_chk F
 GLIBC_2.4 __fgets_chk F

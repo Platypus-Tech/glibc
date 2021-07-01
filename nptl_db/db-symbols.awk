@@ -1,8 +1,7 @@
-# This script processes the output of 'readelf -W -s' on the libpthread.so
-# we've just built.  It checks for all the symbols used in td_symbol_list.
+# This script processes the libc.so abilist (with GLIBC_PRIVATE
+# symbols included).  It checks for all the symbols used in td_symbol_list.
 
 BEGIN {
-%define DB_RTLD_VARIABLE(name) /* Nothing. */
 %define DB_MAIN_VARIABLE(name) /* Nothing. */
 %define DB_MAIN_SYMBOL(name) /* Nothing. */
 %define DB_MAIN_ARRAY_VARIABLE(name) /* Nothing. */
@@ -13,12 +12,9 @@ BEGIN {
    in_symtab = 0;
 }
 
-/Symbol table '.symtab'/ { in_symtab=1; next }
-NF == 0 { in_symtab=0; next }
-
-!in_symtab { next }
-
-NF >= 8 && $7 != "UND" { seen[$NF] = 1 }
+/^GLIBC_PRIVATE / {
+    seen[$2] = 1
+}
 
 END {
   status = 0;

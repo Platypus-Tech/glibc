@@ -23,13 +23,14 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <utmp.h>
+#include <shlib-compat.h>
 
 #include "utmp-compat.h"
 
-#undef weak_alias
-#define weak_alias(n,a)
-#define login __login
+#undef compat_symbol
+#define compat_symbol(...)
 #include "login/login.c"
-#undef login
 
-default_symbol_version (__login, login, UTMP_COMPAT_BASE);
+/* Compatibility symbol as formerly found in libutil.  login@GLIBC_2.0
+   is supplied by login32.c.  */
+symbol_version (__login, login, UTMP_COMPAT_BASE);

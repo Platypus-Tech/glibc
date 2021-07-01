@@ -26,19 +26,30 @@
 extern int __no_posix_timers attribute_hidden;
 
 /* Callback to start helper thread.  */
-extern void __start_helper_thread (void) attribute_hidden;
+extern void __timer_start_helper_thread (void) attribute_hidden;
 
 /* Control variable for helper thread creation.  */
-extern pthread_once_t __helper_once attribute_hidden;
+extern pthread_once_t __timer_helper_once attribute_hidden;
+
+/* Called from fork so that the new subprocess re-creates the
+   notification thread if necessary.  */
+void __timer_fork_subprocess (void) attribute_hidden;
 
 /* TID of the helper thread.  */
-extern pid_t __helper_tid attribute_hidden;
+extern pid_t __timer_helper_tid attribute_hidden;
 
 /* List of active SIGEV_THREAD timers.  */
-extern struct timer *__active_timer_sigev_thread attribute_hidden;
-/* Lock for the __active_timer_sigev_thread.  */
-extern pthread_mutex_t __active_timer_sigev_thread_lock attribute_hidden;
+extern struct timer *__timer_active_sigev_thread attribute_hidden;
 
+/* Lock for __timer_active_sigev_thread.  */
+extern pthread_mutex_t __timer_active_sigev_thread_lock attribute_hidden;
+
+extern __typeof (timer_create) __timer_create;
+libc_hidden_proto (__timer_create)
+extern __typeof (timer_delete) __timer_delete;
+libc_hidden_proto (__timer_delete)
+extern __typeof (timer_getoverrun) __timer_getoverrun;
+libc_hidden_proto (__timer_getoverrun)
 
 /* Type of timers in the kernel.  */
 typedef int kernel_timer_t;
@@ -95,3 +106,12 @@ timerid_to_kernel_timer (timer_t timerid)
   else
     return (kernel_timer_t) ((uintptr_t) timerid);
 }
+
+/* New targets use int instead of timer_t.  The difference only
+   matters on 64-bit targets.  */
+#include <timer_t_was_int_compat.h>
+
+#if TIMER_T_WAS_INT_COMPAT
+# define OLD_TIMER_MAX 256
+extern timer_t __timer_compat_list[OLD_TIMER_MAX];
+#endif

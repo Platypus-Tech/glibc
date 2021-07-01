@@ -1,5 +1,5 @@
-/* Enqueue a list of read or write requests.  Stub version.
-   Copyright (C) 2001-2021 Free Software Foundation, Inc.
+/* Enqueue and list of read or write requests.
+   Copyright (C) 2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,25 +16,10 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include <aio.h>
-#include <errno.h>
+#define LIO_LISTIO lio_listio
+#define AIOCB aiocb
+#define LIO_LISTIO_OLD __lio_listio_21
+#define LIO_LISTIO_NEW __lio_listio_24
+#define LIO_OPCODE_BASE 0
 
-#ifdef BE_AIO64
-#define lio_listio	lio_listio64
-#define aiocb		aiocb64
-#define aio_read	aio_read64
-#define aio_write	aio_write64
-#define aio_suspend	aio_suspend64
-#endif
-
-
-int
-lio_listio (int mode,
-	    struct aiocb *const list[], int nent,
-	    struct sigevent *sig)
-{
-  __set_errno (ENOSYS);
-  return -1;
-}
-
-stub_warning (lio_listio)
+#include <rt/lio_listio-common.c>

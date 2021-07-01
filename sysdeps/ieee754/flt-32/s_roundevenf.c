@@ -17,9 +17,11 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
+#define NO_MATH_REDIRECT
 #include <math.h>
 #include <math_private.h>
 #include <libm-alias-float.h>
+#include <math-use-builtins.h>
 #include <stdint.h>
 
 #define BIAS 0x7f
@@ -29,6 +31,9 @@
 float
 __roundevenf (float x)
 {
+#if USE_ROUNDEVENF_BUILTIN
+  return __builtin_roundevenf (x);
+#else
   uint32_t ix, ux;
   GET_FLOAT_WORD (ix, x);
   ux = ix & 0x7fffffff;
@@ -66,5 +71,8 @@ __roundevenf (float x)
     ix &= 0x80000000;
   SET_FLOAT_WORD (x, ix);
   return x;
+#endif /* ! USE_ROUNDEVENF_BUILTIN  */
 }
+#ifndef __roundevenf
 libm_alias_float (__roundeven, roundeven)
+#endif
