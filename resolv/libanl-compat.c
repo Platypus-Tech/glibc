@@ -1,5 +1,5 @@
-/* Compare dlvsym and __libc_dlvsym results.  Static version.
-   Copyright (C) 2017-2021 Free Software Foundation, Inc.
+/* Placeholder compatibility symbols for libanl.
+   Copyright (C) 2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,17 +16,20 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include <support/xdlfcn.h>
+#if PTHREAD_IN_LIBC
+# include <shlib-compat.h>
+# include <sys/cdefs.h>
 
-static int
-do_test (void)
+/* This file is used to keep specific symbol versions occupied, so
+   that ld does not generate weak symbol version definitions.  */
+
+void
+attribute_compat_text_section
+__attribute_used__
+__libanl_version_placeholder_1 (void)
 {
-  void *handle = xdlopen ("tst-libc_dlvsym-dso.so", RTLD_LAZY);
-  void (*compare) (void) = xdlsym (handle, "compare_vsyms_global");
-  compare ();
-  xdlclose (handle);
-
-  return 0;
 }
 
-#include <support/test-driver.c>
+compat_symbol (libanl, __libanl_version_placeholder_1,
+               __libanl_version_placeholder, GLIBC_2_2_3);
+#endif

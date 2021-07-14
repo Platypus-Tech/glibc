@@ -199,7 +199,11 @@ libc_hidden_proto (ruserpass)
 # else
 extern int __gai_suspend_time64 (const struct gaicb *const list[], int ent,
                                  const struct __timespec64 *timeout);
+#  if PTHREAD_IN_LIBC
+libc_hidden_proto (__gai_suspend_time64)
+#  else
 libanl_hidden_proto (__gai_suspend_time64)
+#  endif
 # endif
 
 /* The following definition has been removed from the public header
@@ -213,7 +217,7 @@ extern enum nss_status _nss_netgroup_parseline (char **cursor,
 						struct __netgrent *result,
 						char *buffer, size_t buflen,
 						int *errnop);
-libnss_files_hidden_proto (_nss_netgroup_parseline)
+libc_hidden_proto (_nss_netgroup_parseline)
 
 #define DECLARE_NSS_PROTOTYPES(service)					      \
 extern enum nss_status _nss_ ## service ## _setprotoent (int);		      \

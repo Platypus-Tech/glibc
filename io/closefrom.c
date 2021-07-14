@@ -1,5 +1,5 @@
-/* Compare dlvsym and __libc_dlvsym results.  Shared object code.
-   Copyright (C) 2017-2021 Free Software Foundation, Inc.
+/* Close a range of file descriptors.
+   Copyright (C) 2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,10 +16,19 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include "tst-libc_dlvsym.h"
+#include <stdio.h>
+#include <unistd.h>
+#include <not-cancel.h>
 
 void
-compare_vsyms_global (void)
+__closefrom (int lowfd)
 {
-  compare_vsyms ();
+  int maxfd = __getdtablesize ();
+  if (maxfd == -1)
+    __fortify_fail ("closefrom failed to get the file descriptor table size");
+
+  for (int i = 0; i < maxfd; i++)
+    if (i >= lowfd)
+      __close_nocancel_nostatus (i);
 }
+weak_alias (__closefrom, closefrom)

@@ -26,8 +26,6 @@
 #include <alloc_buffer.h>
 #include <nss.h>
 
-NSS_DECLARE_MODULE_FUNCTIONS (files)
-
 /* Get implementation for some internal functions.  */
 #include "../resolv/res_hconf.h"
 
@@ -57,12 +55,13 @@ LINE_PARSER
    STRING_FIELD (addr, isspace, 1);
 
    /* Parse address.  */
-   if (inet_pton (af == AF_UNSPEC ? AF_INET : af, addr, entdata->host_addr)
+   if (__inet_pton (af == AF_UNSPEC ? AF_INET : af, addr, entdata->host_addr)
        > 0)
      af = af == AF_UNSPEC ? AF_INET : af;
    else
      {
-       if (af == AF_INET && inet_pton (AF_INET6, addr, entdata->host_addr) > 0)
+       if (af == AF_INET
+	   && __inet_pton (AF_INET6, addr, entdata->host_addr) > 0)
 	 {
 	   if (IN6_IS_ADDR_V4MAPPED (entdata->host_addr))
 	     memcpy (entdata->host_addr, entdata->host_addr + 12, INADDRSZ);
@@ -76,7 +75,7 @@ LINE_PARSER
 	     return 0;
 	 }
        else if (af == AF_UNSPEC
-		&& inet_pton (AF_INET6, addr, entdata->host_addr) > 0)
+		&& __inet_pton (AF_INET6, addr, entdata->host_addr) > 0)
 	 af = AF_INET6;
        else
 	 /* Illegal address: ignore line.  */
@@ -349,7 +348,7 @@ _nss_files_gethostbyname3_r (const char *name, int af, struct hostent *result,
 	status = gethostbyname3_multi
 	  (stream, name, af, result, buffer, buflen, errnop, herrnop);
 
-      internal_endent (&stream);
+      fclose (stream);
     }
 
   if (canonp && status == NSS_STATUS_SUCCESS)
@@ -357,6 +356,7 @@ _nss_files_gethostbyname3_r (const char *name, int af, struct hostent *result,
 
   return status;
 }
+libc_hidden_def (_nss_files_gethostbyname3_r)
 
 enum nss_status
 _nss_files_gethostbyname_r (const char *name, struct hostent *result,
@@ -366,6 +366,7 @@ _nss_files_gethostbyname_r (const char *name, struct hostent *result,
   return _nss_files_gethostbyname3_r (name, AF_INET, result, buffer, buflen,
 				      errnop, herrnop, NULL, NULL);
 }
+libc_hidden_def (_nss_files_gethostbyname_r)
 
 enum nss_status
 _nss_files_gethostbyname2_r (const char *name, int af, struct hostent *result,
@@ -375,6 +376,7 @@ _nss_files_gethostbyname2_r (const char *name, int af, struct hostent *result,
   return _nss_files_gethostbyname3_r (name, af, result, buffer, buflen,
 				      errnop, herrnop, NULL, NULL);
 }
+libc_hidden_def (_nss_files_gethostbyname2_r)
 
 enum nss_status
 _nss_files_gethostbyname4_r (const char *name, struct gaih_addrtuple **pat,
@@ -475,7 +477,7 @@ _nss_files_gethostbyname4_r (const char *name, struct gaih_addrtuple **pat,
 	  status = NSS_STATUS_SUCCESS;
 	}
 
-      internal_endent (&stream);
+      fclose (stream);
     }
   else if (status == NSS_STATUS_TRYAGAIN)
     {
@@ -490,3 +492,4 @@ _nss_files_gethostbyname4_r (const char *name, struct gaih_addrtuple **pat,
 
   return status;
 }
+libc_hidden_def (_nss_files_gethostbyname4_r)

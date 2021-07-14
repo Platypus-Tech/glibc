@@ -1,5 +1,5 @@
-/* Compare dlvsym and __libc_dlvsym results.  Dynamic version.
-   Copyright (C) 2017-2021 Free Software Foundation, Inc.
+/* Close a range of file descriptors.  Linux version.
+   Copyright (C) 2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,19 +16,21 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include "tst-libc_dlvsym.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <sys/param.h>
+#include <unistd.h>
 
-static int
-do_test (void)
+void
+__closefrom (int lowfd)
 {
-  compare_vsyms ();
+  int l = MAX (0, lowfd);
 
-  void *handle = xdlopen ("tst-libc_dlvsym-dso.so", RTLD_LAZY);
-  void (*compare) (void) = xdlsym (handle, "compare_vsyms_global");
-  compare ();
-  xdlclose (handle);
+  int r = __close_range (l, ~0U, 0);
+  if (r == 0)
+    return;
 
-  return 0;
+  if (!__closefrom_fallback (l, true))
+    __fortify_fail ("closefrom failed to close a file descriptor");
 }
-
-#include <support/test-driver.c>
+weak_alias (__closefrom, closefrom)

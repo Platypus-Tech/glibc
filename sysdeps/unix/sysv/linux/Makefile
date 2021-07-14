@@ -64,7 +64,8 @@ sysdep_routines += adjtimex clone umount umount2 readahead sysctl \
 		   pselect32 \
 		   xstat fxstat lxstat xstat64 fxstat64 lxstat64 \
 		   fxstatat fxstatat64 \
-		   xmknod xmknodat convert_scm_timestamps
+		   xmknod xmknodat convert_scm_timestamps \
+		   closefrom_fallback
 
 CFLAGS-gethostid.c = -fexceptions
 CFLAGS-tee.c = -fexceptions -fasynchronous-unwind-tables
@@ -107,7 +108,8 @@ sysdep_headers += sys/mount.h sys/acct.h \
 		  bits/types/struct_semid64_ds.h \
 		  bits/types/struct_semid64_ds_helper.h \
 		  bits/types/struct_shmid64_ds.h \
-		  bits/types/struct_shmid64_ds_helper.h
+		  bits/types/struct_shmid64_ds_helper.h \
+		  bits/pthread_stack_min.h bits/pthread_stack_min-dynamic.h
 
 tests += tst-clone tst-clone2 tst-clone3 tst-fanotify tst-personality \
 	 tst-quota tst-sync_file_range tst-sysconf-iov_max tst-ttyname \
@@ -116,7 +118,8 @@ tests += tst-clone tst-clone2 tst-clone3 tst-fanotify tst-personality \
 	 tst-tgkill tst-sysvsem-linux tst-sysvmsg-linux tst-sysvshm-linux \
 	 tst-timerfd tst-ppoll \
 	 tst-clock_adjtime tst-adjtimex tst-ntp_adjtime tst-ntp_gettime \
-	 tst-ntp_gettimex tst-sigtimedwait tst-misalign-clone
+	 tst-ntp_gettimex tst-sigtimedwait tst-misalign-clone \
+	 tst-close_range
 
 # Test for the symbol version of fcntl that was replaced in glibc 2.28.
 ifeq ($(have-GLIBC_2.27)$(build-shared),yesyes)
@@ -210,6 +213,12 @@ ifeq ($(subdir),time)
 sysdep_headers += sys/timex.h bits/timex.h
 
 sysdep_routines += ntp_gettime ntp_gettimex
+
+tests += \
+  tst-clock_gettime-clobber \
+  tst-gettimeofday-clobber \
+  tst-time-clobber \
+  # tests
 endif
 
 ifeq ($(subdir),signal)

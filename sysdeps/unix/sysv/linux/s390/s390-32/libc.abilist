@@ -2097,6 +2097,10 @@ GLIBC_2.2.3 __rpc_thread_svc_fdset F
 GLIBC_2.2.3 __rpc_thread_svc_max_pollfd F
 GLIBC_2.2.3 __rpc_thread_svc_pollfd F
 GLIBC_2.2.3 fnmatch F
+GLIBC_2.2.3 gai_cancel F
+GLIBC_2.2.3 gai_error F
+GLIBC_2.2.3 gai_suspend F
+GLIBC_2.2.3 getaddrinfo_a F
 GLIBC_2.2.3 pthread_getattr_np F
 GLIBC_2.2.3 sprofil F
 GLIBC_2.2.4 dl_iterate_phdr F
@@ -2447,6 +2451,7 @@ GLIBC_2.34 __ftw64_time64 F
 GLIBC_2.34 __futimens64 F
 GLIBC_2.34 __futimes64 F
 GLIBC_2.34 __futimesat64 F
+GLIBC_2.34 __gai_suspend_time64 F
 GLIBC_2.34 __getitimer64 F
 GLIBC_2.34 __getrusage64 F
 GLIBC_2.34 __gettimeofday64 F
@@ -2477,9 +2482,7 @@ GLIBC_2.34 __pthread_cond_clockwait64 F
 GLIBC_2.34 __pthread_cond_timedwait64 F
 GLIBC_2.34 __pthread_key_create F
 GLIBC_2.34 __pthread_mutex_clocklock64 F
-GLIBC_2.34 __pthread_mutex_lock F
 GLIBC_2.34 __pthread_mutex_timedlock64 F
-GLIBC_2.34 __pthread_mutex_unlock F
 GLIBC_2.34 __pthread_register_cancel F
 GLIBC_2.34 __pthread_register_cancel_defer F
 GLIBC_2.34 __pthread_rwlock_clockrdlock64 F
@@ -2534,6 +2537,8 @@ GLIBC_2.34 aio_suspend64 F
 GLIBC_2.34 aio_write F
 GLIBC_2.34 aio_write64 F
 GLIBC_2.34 call_once F
+GLIBC_2.34 close_range F
+GLIBC_2.34 closefrom F
 GLIBC_2.34 cnd_broadcast F
 GLIBC_2.34 cnd_destroy F
 GLIBC_2.34 cnd_init F
@@ -2551,6 +2556,10 @@ GLIBC_2.34 dlsym F
 GLIBC_2.34 dlvsym F
 GLIBC_2.34 execveat F
 GLIBC_2.34 forkpty F
+GLIBC_2.34 gai_cancel F
+GLIBC_2.34 gai_error F
+GLIBC_2.34 gai_suspend F
+GLIBC_2.34 getaddrinfo_a F
 GLIBC_2.34 lio_listio F
 GLIBC_2.34 lio_listio64 F
 GLIBC_2.34 login F
@@ -2574,6 +2583,7 @@ GLIBC_2.34 mtx_timedlock F
 GLIBC_2.34 mtx_trylock F
 GLIBC_2.34 mtx_unlock F
 GLIBC_2.34 openpty F
+GLIBC_2.34 posix_spawn_file_actions_addclosefrom_np F
 GLIBC_2.34 pthread_attr_getaffinity_np F
 GLIBC_2.34 pthread_attr_getguardsize F
 GLIBC_2.34 pthread_attr_getstack F

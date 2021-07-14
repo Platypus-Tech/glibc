@@ -9,8 +9,12 @@ Version 2.34
 
 Major new features:
 
-* Add _SC_MINSIGSTKSZ and _SC_SIGSTKSZ.  When _SC_SIGSTKSZ_SOURCE or
-  _GNU_SOURCE are defined, MINSIGSTKSZ and SIGSTKSZ are no longer
+* When _DYNAMIC_STACK_SIZE_SOURCE or _GNU_SOURCE are defined,
+  PTHREAD_STACK_MIN is no longer constant and is redefined to
+  sysconf(_SC_THREAD_STACK_MIN).
+
+* Add _SC_MINSIGSTKSZ and _SC_SIGSTKSZ.  When _DYNAMIC_STACK_SIZE_SOURCE
+  or _GNU_SOURCE are defined, MINSIGSTKSZ and SIGSTKSZ are no longer
   constant on Linux.  MINSIGSTKSZ is redefined to sysconf(_SC_MINSIGSTKSZ)
   and SIGSTKSZ is redefined to sysconf (_SC_SIGSTKSZ).
 
@@ -60,6 +64,18 @@ Major new features:
   to call async-signal-safe functions (such as raise or execve).  This function
   is currently a GNU extension.
 
+* On Linux, the close_range function has been added.  It allows efficiently
+  closing a range of file descriptors on recent kernels (version 5.9).
+
+* The function closefrom has been added.  It closes all file descriptors
+  greater than given integer.  This function is a GNU extension, although it
+  also present in other systems.
+
+* The posix_spawn_file_actions_closefrom_np function has been added, enabling
+  posix_spawn and posix_spawnp to close all file descriptors great than or
+  equal to a giver integer.  This function is a GNU extension, although
+  Solaris also provides a similar function.
+
 Deprecated and removed features, and other changes affecting compatibility:
 
 * The function pthread_mutex_consistent_np has been deprecated; programs
@@ -92,6 +108,10 @@ Deprecated and removed features, and other changes affecting compatibility:
   symbolic links.  This increases compatibility with distribution
   package managers that delete removed files late during the package
   upgrade or downgrade process.
+
+* The symbols mallwatch and tr_break are now deprecated and no longer used in
+  mtrace.  Similar functionality can be achieved by using conditional
+  breakpoints within mtrace functions from within gdb.
 
 Changes to build and runtime requirements:
 

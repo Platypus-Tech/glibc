@@ -42,6 +42,7 @@ tests := mallocbug tst-malloc tst-valloc tst-calloc tst-obstack \
 	 tst-malloc-stats-cancellation \
 	 tst-tcfree1 tst-tcfree2 tst-tcfree3 \
 	 tst-safe-linking \
+	 tst-mallocalign1 \
 
 tests-static := \
 	 tst-interpose-static-nothread \
@@ -76,6 +77,29 @@ tests-exclude-malloc-check = tst-malloc-check tst-malloc-usable \
 
 # Run all tests with MALLOC_CHECK_=3
 tests-malloc-check = $(filter-out $(tests-exclude-malloc-check),$(tests))
+
+# Tests that don't play well with mcheck.  They are either bugs in mcheck or
+# the tests expect specific internal behavior that is changed due to linking to
+# libmcheck.a.
+tests-exclude-mcheck = tst-mallocstate \
+	tst-safe-linking tst-malloc-usable \
+	tst-malloc-backtrace \
+	tst-malloc-fork-deadlock \
+	tst-malloc-stats-cancellation \
+	tst-malloc-tcache-leak \
+	tst-malloc-thread-exit \
+	tst-malloc-thread-fail \
+	tst-malloc-usable-static \
+	tst-malloc-usable-static-tunables \
+	tst-malloc-usable-tunables \
+	tst-malloc_info \
+	tst-memalign \
+	tst-posix_memalign \
+	tst-realloc \
+	tst-pvalloc-fortify \
+	tst-reallocarray
+
+tests-mcheck = $(filter-out $(tests-exclude-mcheck), $(tests))
 
 routines = malloc morecore mcheck mtrace obstack reallocarray \
   scratch_buffer_dupfree \
@@ -118,6 +142,11 @@ $(objpfx)tst-mallocfork3: $(shared-thread-library)
 $(objpfx)tst-mallocfork3-mcheck: $(shared-thread-library)
 $(objpfx)tst-malloc-fork-deadlock: $(shared-thread-library)
 $(objpfx)tst-malloc-stats-cancellation: $(shared-thread-library)
+$(objpfx)tst-malloc-backtrace-mcheck: $(shared-thread-library)
+$(objpfx)tst-malloc-thread-exit-mcheck: $(shared-thread-library)
+$(objpfx)tst-malloc-thread-fail-mcheck: $(shared-thread-library)
+$(objpfx)tst-malloc-fork-deadlock-mcheck: $(shared-thread-library)
+$(objpfx)tst-malloc-stats-cancellation-mcheck: $(shared-thread-library)
 $(objpfx)tst-malloc-backtrace-malloc-check: $(shared-thread-library)
 $(objpfx)tst-malloc-thread-exit-malloc-check: $(shared-thread-library)
 $(objpfx)tst-malloc-thread-fail-malloc-check: $(shared-thread-library)
@@ -244,25 +273,28 @@ $(objpfx)memusage: memusage.sh
 	    -e 's|@REPORT_BUGS_TO@|$(REPORT_BUGS_TO)|' $^ > $@.new \
 	&& rm -f $@ && mv $@.new $@ && chmod +x $@
 
-
-# Extra dependencies
-$(foreach o,$(all-object-suffixes),$(objpfx)malloc$(o)): arena.c hooks.c
-
 # Compile the tests with a flag which suppresses the mallopt call in
 # the test skeleton.
 $(tests:%=$(objpfx)%.o): CPPFLAGS += -DTEST_NO_MALLOPT
 
 $(objpfx)tst-interpose-nothread: $(objpfx)tst-interpose-aux-nothread.o
+$(objpfx)tst-interpose-nothread-mcheck: $(objpfx)tst-interpose-aux-nothread.o
 $(objpfx)tst-interpose-nothread-malloc-check: \
 	$(objpfx)tst-interpose-aux-nothread.o
 $(objpfx)tst-interpose-thread: \
   $(objpfx)tst-interpose-aux-thread.o $(shared-thread-library)
+$(objpfx)tst-interpose-thread-mcheck: \
+  $(objpfx)tst-interpose-aux-thread.o $(shared-thread-library)
 $(objpfx)tst-interpose-thread-malloc-check: \
   $(objpfx)tst-interpose-aux-thread.o $(shared-thread-library)
 $(objpfx)tst-interpose-static-nothread: $(objpfx)tst-interpose-aux-nothread.o
+$(objpfx)tst-interpose-static-nothread-mcheck: \
+	$(objpfx)tst-interpose-aux-nothread.o
 $(objpfx)tst-interpose-static-nothread-malloc-check: \
 	$(objpfx)tst-interpose-aux-nothread.o
 $(objpfx)tst-interpose-static-thread: \
+  $(objpfx)tst-interpose-aux-thread.o $(static-thread-library)
+$(objpfx)tst-interpose-static-thread-mcheck: \
   $(objpfx)tst-interpose-aux-thread.o $(static-thread-library)
 $(objpfx)tst-interpose-static-thread-malloc-check: \
   $(objpfx)tst-interpose-aux-thread.o $(static-thread-library)
@@ -280,6 +312,9 @@ $(objpfx)tst-dynarray-fail-mem.out: $(objpfx)tst-dynarray-fail.out
 $(objpfx)tst-malloc-tcache-leak: $(shared-thread-library)
 $(objpfx)tst-malloc_info: $(shared-thread-library)
 $(objpfx)tst-mallocfork2: $(shared-thread-library)
+$(objpfx)tst-malloc-tcache-leak-mcheck: $(shared-thread-library)
+$(objpfx)tst-malloc_info-mcheck: $(shared-thread-library)
+$(objpfx)tst-mallocfork2-mcheck: $(shared-thread-library)
 $(objpfx)tst-malloc-tcache-leak-malloc-check: $(shared-thread-library)
 $(objpfx)tst-malloc_info-malloc-check: $(shared-thread-library)
 $(objpfx)tst-mallocfork2-malloc-check: $(shared-thread-library)

@@ -44,7 +44,8 @@ __convert_scm_timestamps (struct msghdr *msg, socklen_t msgsize)
      'struct __kernel_sock_timeval' while for SO_TIMESTAMPNS_NEW is a
      'struct __kernel_timespec'.  In either case it is two uint64_t
      members.  */
-  uint64_t tvts[2];
+  int64_t tvts[2];
+  int32_t tmp[2];
 
   struct cmsghdr *cmsg, *last = NULL;
   int type = 0;
@@ -69,7 +70,9 @@ __convert_scm_timestamps (struct msghdr *msg, socklen_t msgsize)
 
 	/* fallthrough  */
 	common:
-	  memcpy (tvts, CMSG_DATA (cmsg), sizeof (tvts));
+	  memcpy (tmp, CMSG_DATA (cmsg), sizeof (tmp));
+	  tvts[0] = tmp[0];
+	  tvts[1] = tmp[1];
 	  break;
 	}
 
@@ -87,6 +90,8 @@ __convert_scm_timestamps (struct msghdr *msg, socklen_t msgsize)
 
   msg->msg_controllen += CMSG_SPACE (sizeof tvts);
   cmsg = CMSG_NXTHDR(msg, last);
+  if (cmsg == NULL)
+    return;
   cmsg->cmsg_level = SOL_SOCKET;
   cmsg->cmsg_type = type;
   cmsg->cmsg_len = CMSG_LEN (sizeof tvts);

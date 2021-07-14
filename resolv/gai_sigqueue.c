@@ -27,5 +27,5 @@ __gai_sigqueue (int sig, const union sigval val, pid_t caller_pid)
   __set_errno (ENOSYS);
   return -1;
 }
-
+libc_hidden_def (__gai_sigqueue)
 stub_warning (__gai_sigqueue)

@@ -31,7 +31,8 @@ routines		= nsswitch getnssent getnssent_r digits_dots \
 			  compat-lookup nss_hash nss_files_fopen \
 			  nss_readline nss_parse_line_result \
 			  nss_fgetent_r nss_module nss_action \
-			  nss_action_parse nss_database
+			  nss_action_parse nss_database nss_files_data \
+			  nss_files_functions
 
 # These are the databases that go through nss dispatch.
 # Caution: if you add a database here, you must add its real name
@@ -98,9 +99,19 @@ subdir-dirs = $(services:%=nss_%)
 vpath %.c $(subdir-dirs) ../locale/programs ../intl
 
 
-libnss_files-routines	:= $(addprefix files-, \
-			     $(filter-out key, $(databases))) \
-			   files-initgroups files-init
+routines += \
+  $(addprefix files-, $(filter-out key, $(databases))) \
+  files-init \
+  files-initgroups \
+  # routines
+
+# Build only an empty shared libnss_files.
+libnss_files-inhibit-o = $(filter-out .os,$(object-suffixes))
+
+# Pretend that libnss_files.so is a linker script, so that the symbolic link
+# is not installed.
+install-lib-ldscripts = libnss_files.so
+$(inst_libdir)/libnss_files.so:
 
 libnss_db-dbs		:= $(addprefix db-,\
 				       $(filter-out hosts network key alias,\
@@ -116,12 +127,9 @@ libnss_compat-routines	:= $(addprefix compat-,grp pwd spwd initgroups) \
 install-others		+= $(inst_vardbdir)/Makefile
 
 # Build static module into libc if requested
-libnss_files-inhibit-o	= $(filter-out .os,$(object-suffixes))
 libnss_db-inhibit-o	= $(filter-out .os,$(object-suffixes))
 libnss_compat-inhibit-o	= $(filter-out .os,$(object-suffixes))
 ifeq ($(build-static-nss),yes)
-routines                += $(libnss_files-routines)
-static-only-routines    += $(libnss_files-routines)
 tests-static		+= tst-nss-static
 endif
 extra-test-objs		+= nss_test1.os nss_test2.os
@@ -137,8 +145,6 @@ libnss-libc = $(common-objpfx)linkobj/libc.so
 # RPC interfaces with the version of libc.so that makes them available
 # for new links:
 $(services:%=$(objpfx)libnss_%.so): libc-for-link = $(libnss-libc)
-
-$(objpfx)libnss_db.so: $(objpfx)libnss_files.so
 
 $(libnss_db-dbs:%=$(objpfx)%.c): $(objpfx)db-%.c: nss_files/files-%.c
 	@rm -f $@.new

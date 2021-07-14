@@ -22,8 +22,6 @@
 #include <stdint.h>
 #include <nss.h>
 
-NSS_DECLARE_MODULE_FUNCTIONS (files)
-
 #define ENTNAME		netent
 #define DATABASE	"networks"
 #define NEED_H_ERRNO
@@ -71,7 +69,7 @@ LINE_PARSER
        *cp = '\0';
        addr = newp;
      }
-   result->n_net = inet_network (addr);
+   result->n_net = __inet_network (addr);
    result->n_addrtype = AF_INET;
 
  })

@@ -883,7 +883,10 @@ GLIBC_2.33 fwprintf F
 GLIBC_2.33 fwrite F
 GLIBC_2.33 fwrite_unlocked F
 GLIBC_2.33 fwscanf F
+GLIBC_2.33 gai_cancel F
+GLIBC_2.33 gai_error F
 GLIBC_2.33 gai_strerror F
+GLIBC_2.33 gai_suspend F
 GLIBC_2.33 gcvt F
 GLIBC_2.33 get_avphys_pages F
 GLIBC_2.33 get_current_dir_name F
@@ -891,6 +894,7 @@ GLIBC_2.33 get_nprocs F
 GLIBC_2.33 get_nprocs_conf F
 GLIBC_2.33 get_phys_pages F
 GLIBC_2.33 getaddrinfo F
+GLIBC_2.33 getaddrinfo_a F
 GLIBC_2.33 getaliasbyname F
 GLIBC_2.33 getaliasbyname_r F
 GLIBC_2.33 getaliasent F
@@ -2141,8 +2145,6 @@ GLIBC_2.34 __libc_start_main F
 GLIBC_2.34 __mq_open_2 F
 GLIBC_2.34 __pthread_cleanup_routine F
 GLIBC_2.34 __pthread_key_create F
-GLIBC_2.34 __pthread_mutex_lock F
-GLIBC_2.34 __pthread_mutex_unlock F
 GLIBC_2.34 __pthread_register_cancel F
 GLIBC_2.34 __pthread_register_cancel_defer F
 GLIBC_2.34 __pthread_unregister_cancel F
@@ -2166,6 +2168,8 @@ GLIBC_2.34 aio_suspend64 F
 GLIBC_2.34 aio_write F
 GLIBC_2.34 aio_write64 F
 GLIBC_2.34 call_once F
+GLIBC_2.34 close_range F
+GLIBC_2.34 closefrom F
 GLIBC_2.34 cnd_broadcast F
 GLIBC_2.34 cnd_destroy F
 GLIBC_2.34 cnd_init F
@@ -2183,6 +2187,10 @@ GLIBC_2.34 dlsym F
 GLIBC_2.34 dlvsym F
 GLIBC_2.34 execveat F
 GLIBC_2.34 forkpty F
+GLIBC_2.34 gai_cancel F
+GLIBC_2.34 gai_error F
+GLIBC_2.34 gai_suspend F
+GLIBC_2.34 getaddrinfo_a F
 GLIBC_2.34 lio_listio F
 GLIBC_2.34 lio_listio64 F
 GLIBC_2.34 login F
@@ -2206,6 +2214,7 @@ GLIBC_2.34 mtx_timedlock F
 GLIBC_2.34 mtx_trylock F
 GLIBC_2.34 mtx_unlock F
 GLIBC_2.34 openpty F
+GLIBC_2.34 posix_spawn_file_actions_addclosefrom_np F
 GLIBC_2.34 pthread_attr_getaffinity_np F
 GLIBC_2.34 pthread_attr_getguardsize F
 GLIBC_2.34 pthread_attr_getstack F
