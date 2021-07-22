@@ -55,35 +55,38 @@ struct resolv_context;
    Also used by __res_context_query.  */
 int __res_context_mkquery (struct resolv_context *, int op, const char *dname,
                            int class, int type, const unsigned char *data,
-                           unsigned char *buf, int buflen) attribute_hidden;
+                           unsigned char *buf, int buflen);
+libc_hidden_proto (__res_context_mkquery)
 
 /* Main resolver query function for use within glibc.  */
 int __res_context_search (struct resolv_context *, const char *, int, int,
                           unsigned char *, int, unsigned char **,
                           unsigned char **, int *, int *, int *);
-libresolv_hidden_proto (__res_context_search)
+libc_hidden_proto (__res_context_search)
 
 /* Main resolver query function for use within glibc.  */
 int __res_context_query (struct resolv_context *, const char *, int, int,
                          unsigned char *, int, unsigned char **,
                          unsigned char **, int *, int *, int *);
-libresolv_hidden_proto (__res_context_query)
+libc_hidden_proto (__res_context_query)
 
 /* Internal function used to implement the query and search
    functions.  */
 int __res_context_send (struct resolv_context *, const unsigned char *, int,
                         const unsigned char *, int, unsigned char *,
                         int, unsigned char **, unsigned char **,
-                        int *, int *, int *) attribute_hidden;
+                        int *, int *, int *);
+libc_hidden_proto (__res_context_send)
 
 /* Internal function similar to res_hostalias.  */
 const char *__res_context_hostalias (struct resolv_context *,
                                      const char *, char *, size_t);
-libresolv_hidden_proto (__res_context_hostalias);
+libc_hidden_proto (__res_context_hostalias);
 
 /* Add an OPT record to a DNS query.  */
 int __res_nopt (struct resolv_context *, int n0,
-                unsigned char *buf, int buflen, int anslen) attribute_hidden;
+                unsigned char *buf, int buflen, int anslen);
+libc_hidden_proto (__res_nopt)
 
 /* Convert from presentation format (which usually means ASCII
    printable) to network format (which is usually some kind of binary
@@ -102,5 +105,11 @@ void __res_thread_freeres (void) attribute_hidden;
    the socket FD.  FAMILY must be AF_INET or AF_INET6.  Returns 0 on
    success, -1 on failure.  */
 int __res_enable_icmp (int family, int fd) attribute_hidden;
+
+
+/* Returns the name server address for the indicated index.  */
+struct sockaddr *__res_get_nsaddr (res_state statp, unsigned int n);
+libc_hidden_proto (__res_get_nsaddr)
+
 
 #endif  /* _RESOLV_INTERNAL_H */

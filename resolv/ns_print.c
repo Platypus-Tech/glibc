@@ -103,9 +103,9 @@ ns_sprintrrf(const u_char *msg, size_t msglen,
 	/*
 	 * Owner.
 	 */
-	if (name_ctx != NULL && ns_samename(name_ctx, name) == 1) {
+	if (name_ctx != NULL && __libc_ns_samename (name_ctx, name) == 1)
 		T(addstr("\t\t\t", 3, &buf, &buflen));
-	} else {
+	else {
 		len = prune_origin(name, origin);
 		if (*name == '\0') {
 			goto root;
@@ -621,7 +621,7 @@ prune_origin(const char *name, const char *origin) {
 	const char *oname = name;
 
 	while (*name != '\0') {
-		if (origin != NULL && ns_samename(name, origin) == 1)
+		if (origin != NULL && __libc_ns_samename (name, origin) == 1)
 			return (name - oname - (name > oname));
 		while (*name != '\0') {
 			if (*name == '\\') {
@@ -693,7 +693,7 @@ addname(const u_char *msg, size_t msglen,
 	char *save_buf = *buf;
 	int n;
 
-	n = dn_expand(msg, msg + msglen, *pp, *buf, *buflen);
+	n = __libc_dn_expand (msg, msg + msglen, *pp, *buf, *buflen);
 	if (n < 0)
 		goto enospc;	/*%< Guess. */
 	newlen = prune_origin(*buf, origin);

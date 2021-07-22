@@ -139,65 +139,9 @@ libresolv_hidden_def (ns_samedomain)
  *	is "a" a subdomain of "b"?
  */
 int
-ns_subdomain(const char *a, const char *b) {
-	return (ns_samename(a, b) != 1 && ns_samedomain(a, b));
+ns_subdomain (const char *a, const char *b)
+{
+  return __libc_ns_samename (a, b) != 1 && ns_samedomain (a, b);
 }
-
-/*%
- *	make a canonical copy of domain name "src"
- *
- * notes:
- * \code
- *	foo -> foo.
- *	foo. -> foo.
- *	foo.. -> foo.
- *	foo\. -> foo\..
- *	foo\\. -> foo\\.
- * \endcode
- */
-
-int
-ns_makecanon(const char *src, char *dst, size_t dstsize) {
-	size_t n = strlen(src);
-
-	if (n + sizeof "." > dstsize) {			/*%< Note: sizeof == 2 */
-		__set_errno (EMSGSIZE);
-		return (-1);
-	}
-	strcpy(dst, src);
-	while (n >= 1U && dst[n - 1] == '.')		/*%< Ends in "." */
-		if (n >= 2U && dst[n - 2] == '\\' &&	/*%< Ends in "\." */
-		    (n < 3U || dst[n - 3] != '\\'))	/*%< But not "\\." */
-			break;
-		else
-			dst[--n] = '\0';
-	dst[n++] = '.';
-	dst[n] = '\0';
-	return (0);
-}
-libresolv_hidden_def (ns_makecanon)
-
-/*%
- *	determine whether domain name "a" is the same as domain name "b"
- *
- * return:
- *\li	-1 on error
- *\li	0 if names differ
- *\li	1 if names are the same
- */
-
-int
-ns_samename(const char *a, const char *b) {
-	char ta[NS_MAXDNAME], tb[NS_MAXDNAME];
-
-	if (ns_makecanon(a, ta, sizeof ta) < 0 ||
-	    ns_makecanon(b, tb, sizeof tb) < 0)
-		return (-1);
-	if (strcasecmp(ta, tb) == 0)
-		return (1);
-	else
-		return (0);
-}
-libresolv_hidden_def (ns_samename)
 
 /*! \file */

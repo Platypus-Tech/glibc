@@ -65,7 +65,8 @@ sysdep_routines += adjtimex clone umount umount2 readahead sysctl \
 		   xstat fxstat lxstat xstat64 fxstat64 lxstat64 \
 		   fxstatat fxstatat64 \
 		   xmknod xmknodat convert_scm_timestamps \
-		   closefrom_fallback
+		   closefrom_fallback \
+		   clone3 clone-internal
 
 CFLAGS-gethostid.c = -fexceptions
 CFLAGS-tee.c = -fexceptions -fasynchronous-unwind-tables
@@ -119,7 +120,10 @@ tests += tst-clone tst-clone2 tst-clone3 tst-fanotify tst-personality \
 	 tst-timerfd tst-ppoll \
 	 tst-clock_adjtime tst-adjtimex tst-ntp_adjtime tst-ntp_gettime \
 	 tst-ntp_gettimex tst-sigtimedwait tst-misalign-clone \
-	 tst-close_range
+  tst-close_range \
+  tst-prctl \
+  tst-scm_rights \
+  # tests
 
 # Test for the symbol version of fcntl that was replaced in glibc 2.28.
 ifeq ($(have-GLIBC_2.27)$(build-shared),yesyes)
@@ -137,6 +141,18 @@ tests-time64 += \
   tst-ppoll-time64 \
   tst-sigtimedwait-time64 \
   tst-timerfd-time64 \
+  tst-prctl-time64 \
+  tst-scm_rights-time64 \
+  # tests-time64
+
+tests-clone-internal = \
+  tst-align-clone-internal \
+  tst-clone2-internal \
+  tst-clone3-internal \
+  tst-getpid1-internal \
+  tst-misalign-clone-internal
+tests-internal += $(tests-clone-internal)
+tests-static += $(tests-clone-internal)
 
 CFLAGS-tst-sigcontext-get_pc.c = -fasynchronous-unwind-tables
 

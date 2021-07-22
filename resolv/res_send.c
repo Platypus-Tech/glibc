@@ -180,7 +180,6 @@ evNowTime(struct timespec *res) {
 
 /* Forward. */
 
-static struct sockaddr *get_nsaddr (res_state, unsigned int);
 static int		send_vc(res_state, const u_char *, int,
 				const u_char *, int,
 				u_char **, int *, int *, int, u_char **,
@@ -191,98 +190,6 @@ static int		send_dg(res_state, const u_char *, int,
 				int *, int *, u_char **,
 				u_char **, int *, int *, int *);
 static int		sock_eq(struct sockaddr_in6 *, struct sockaddr_in6 *);
-
-/* Public. */
-
-/* int
- * res_isourserver(ina)
- *	looks up "ina" in _res.ns_addr_list[]
- * returns:
- *	0  : not found
- *	>0 : found
- * author:
- *	paul vixie, 29may94
- */
-int
-res_ourserver_p(const res_state statp, const struct sockaddr_in6 *inp)
-{
-	int ns;
-
-	if (inp->sin6_family == AF_INET) {
-	    struct sockaddr_in *in4p = (struct sockaddr_in *) inp;
-	    in_port_t port = in4p->sin_port;
-	    in_addr_t addr = in4p->sin_addr.s_addr;
-
-	    for (ns = 0;  ns < statp->nscount;  ns++) {
-		const struct sockaddr_in *srv =
-		    (struct sockaddr_in *) get_nsaddr (statp, ns);
-
-		if ((srv->sin_family == AF_INET) &&
-		    (srv->sin_port == port) &&
-		    (srv->sin_addr.s_addr == INADDR_ANY ||
-		     srv->sin_addr.s_addr == addr))
-		    return (1);
-	    }
-	} else if (inp->sin6_family == AF_INET6) {
-	    for (ns = 0;  ns < statp->nscount;  ns++) {
-		const struct sockaddr_in6 *srv
-		  = (struct sockaddr_in6 *) get_nsaddr (statp, ns);
-		if ((srv->sin6_family == AF_INET6) &&
-		    (srv->sin6_port == inp->sin6_port) &&
-		    !(memcmp(&srv->sin6_addr, &in6addr_any,
-			     sizeof (struct in6_addr)) &&
-		      memcmp(&srv->sin6_addr, &inp->sin6_addr,
-			     sizeof (struct in6_addr))))
-		    return (1);
-	    }
-	}
-	return (0);
-}
-
-int
-res_isourserver (const struct sockaddr_in *inp)
-{
-  return res_ourserver_p (&_res, (const struct sockaddr_in6 *) inp);
-}
-
-/* int
- * res_nameinquery(name, type, class, buf, eom)
- *	look for (name,type,class) in the query section of packet (buf,eom)
- * requires:
- *	buf + HFIXEDSZ <= eom
- * returns:
- *	-1 : format error
- *	0  : not found
- *	>0 : found
- * author:
- *	paul vixie, 29may94
- */
-int
-res_nameinquery(const char *name, int type, int class,
-		const u_char *buf, const u_char *eom)
-{
-	const u_char *cp = buf + HFIXEDSZ;
-	int qdcount = ntohs(((HEADER*)buf)->qdcount);
-
-	while (qdcount-- > 0) {
-		char tname[MAXDNAME+1];
-		int n, ttype, tclass;
-
-		n = dn_expand(buf, eom, cp, tname, sizeof tname);
-		if (n < 0)
-			return (-1);
-		cp += n;
-		if (cp + 2 * INT16SZ > eom)
-			return (-1);
-		NS_GET16(ttype, cp);
-		NS_GET16(tclass, cp);
-		if (ttype == type && tclass == class &&
-		    ns_samename(tname, name) == 1)
-			return (1);
-	}
-	return (0);
-}
-libresolv_hidden_def (res_nameinquery)
 
 /* Returns a shift value for the name server index.  Used to implement
    RES_ROTATE.  */
@@ -340,61 +247,6 @@ mask_ad_bit (struct resolv_context *ctx, void *buf)
   if (!(ctx->resp->options & RES_TRUSTAD))
     ((HEADER *) buf)->ad = 0;
 }
-
-/* int
- * res_queriesmatch(buf1, eom1, buf2, eom2)
- *	is there a 1:1 mapping of (name,type,class)
- *	in (buf1,eom1) and (buf2,eom2)?
- * returns:
- *	-1 : format error
- *	0  : not a 1:1 mapping
- *	>0 : is a 1:1 mapping
- * author:
- *	paul vixie, 29may94
- */
-int
-res_queriesmatch(const u_char *buf1, const u_char *eom1,
-		 const u_char *buf2, const u_char *eom2)
-{
-	if (buf1 + HFIXEDSZ > eom1 || buf2 + HFIXEDSZ > eom2)
-		return (-1);
-
-	/*
-	 * Only header section present in replies to
-	 * dynamic update packets.
-	 */
-	if ((((HEADER *)buf1)->opcode == ns_o_update) &&
-	    (((HEADER *)buf2)->opcode == ns_o_update))
-		return (1);
-
-	/* Note that we initially do not convert QDCOUNT to the host byte
-	   order.  We can compare it with the second buffer's QDCOUNT
-	   value without doing this.  */
-	int qdcount = ((HEADER*)buf1)->qdcount;
-	if (qdcount != ((HEADER*)buf2)->qdcount)
-		return (0);
-
-	qdcount = htons (qdcount);
-	const u_char *cp = buf1 + HFIXEDSZ;
-
-	while (qdcount-- > 0) {
-		char tname[MAXDNAME+1];
-		int n, ttype, tclass;
-
-		n = dn_expand(buf1, eom1, cp, tname, sizeof tname);
-		if (n < 0)
-			return (-1);
-		cp += n;
-		if (cp + 2 * INT16SZ > eom1)
-			return (-1);
-		NS_GET16(ttype, cp);
-		NS_GET16(tclass, cp);
-		if (!res_nameinquery(tname, ttype, tclass, buf2, eom2))
-			return (0);
-	}
-	return (1);
-}
-libresolv_hidden_def (res_queriesmatch)
 
 int
 __res_context_send (struct resolv_context *ctx,
@@ -573,6 +425,7 @@ __res_context_send (struct resolv_context *ctx,
 		__set_errno (terrno);
 	return (-1);
 }
+libc_hidden_def (__res_context_send)
 
 /* Common part of res_nsend and res_send.  */
 static int
@@ -592,37 +445,30 @@ context_send_common (struct resolv_context *ctx,
 }
 
 int
-res_nsend (res_state statp, const unsigned char *buf, int buflen,
-	   unsigned char *ans, int anssiz)
+___res_nsend (res_state statp, const unsigned char *buf, int buflen,
+	      unsigned char *ans, int anssiz)
 {
   return context_send_common
     (__resolv_context_get_override (statp), buf, buflen, ans, anssiz);
 }
+versioned_symbol (libc, ___res_nsend, res_nsend, GLIBC_2_34);
+#if OTHER_SHLIB_COMPAT (libresolv, GLIBC_2_2, GLIBC_2_34)
+compat_symbol (libresolv, ___res_nsend, __res_nsend, GLIBC_2_2);
+#endif
 
 int
-res_send (const unsigned char *buf, int buflen, unsigned char *ans, int anssiz)
+___res_send (const unsigned char *buf, int buflen, unsigned char *ans,
+	     int anssiz)
 {
   return context_send_common
     (__resolv_context_get (), buf, buflen, ans, anssiz);
 }
+versioned_symbol (libc, ___res_send, res_send, GLIBC_2_34);
+#if OTHER_SHLIB_COMPAT (libresolv, GLIBC_2_0, GLIBC_2_34)
+compat_symbol (libresolv, ___res_send, __res_send, GLIBC_2_0);
+#endif
 
 /* Private */
-
-static struct sockaddr *
-get_nsaddr (res_state statp, unsigned int n)
-{
-  assert (n < statp->nscount);
-
-  if (statp->nsaddr_list[n].sin_family == 0 && EXT(statp).nsaddrs[n] != NULL)
-    /* EXT(statp).nsaddrs[n] holds an address that is larger than
-       struct sockaddr, and user code did not update
-       statp->nsaddr_list[n].  */
-    return (struct sockaddr *) EXT(statp).nsaddrs[n];
-  else
-    /* User code updated statp->nsaddr_list[n], or statp->nsaddr_list[n]
-       has the same content as EXT(statp).nsaddrs[n].  */
-    return (struct sockaddr *) (void *) &statp->nsaddr_list[n];
-}
 
 /* Close the resolver structure, assign zero to *RESPLEN2 if RESPLEN2
    is not NULL, and return zero.  */
@@ -717,7 +563,7 @@ send_vc(res_state statp,
 	const HEADER *hp = (HEADER *) buf;
 	const HEADER *hp2 = (HEADER *) buf2;
 	HEADER *anhp = (HEADER *) *ansp;
-	struct sockaddr *nsap = get_nsaddr (statp, ns);
+	struct sockaddr *nsap = __res_get_nsaddr (statp, ns);
 	int truncating, connreset, n;
 	/* On some architectures compiler might emit a warning indicating
 	   'resplen' may be used uninitialized.  However if buf2 == NULL
@@ -746,9 +592,9 @@ send_vc(res_state statp,
 		struct sockaddr_in6 peer;
 		socklen_t size = sizeof peer;
 
-		if (getpeername(statp->_vcsock,
-				(struct sockaddr *)&peer, &size) < 0 ||
-		    !sock_eq(&peer, (struct sockaddr_in6 *) nsap)) {
+		if (__getpeername (statp->_vcsock,
+				   (struct sockaddr *) &peer, &size) < 0
+		    || !sock_eq (&peer, (struct sockaddr_in6 *) nsap)) {
 			__res_iclose(statp, false);
 			statp->_flags &= ~RES_F_VC;
 		}
@@ -758,7 +604,7 @@ send_vc(res_state statp,
 		if (statp->_vcsock >= 0)
 		  __res_iclose(statp, false);
 
-		statp->_vcsock = socket
+		statp->_vcsock = __socket
 		  (nsap->sa_family, SOCK_STREAM | SOCK_CLOEXEC, 0);
 		if (statp->_vcsock < 0) {
 			*terrno = errno;
@@ -767,10 +613,10 @@ send_vc(res_state statp,
 			return (-1);
 		}
 		__set_errno (0);
-		if (connect(statp->_vcsock, nsap,
-			    nsap->sa_family == AF_INET
-			    ? sizeof (struct sockaddr_in)
-			    : sizeof (struct sockaddr_in6)) < 0) {
+		if (__connect (statp->_vcsock, nsap,
+			       nsap->sa_family == AF_INET
+			       ? sizeof (struct sockaddr_in)
+			       : sizeof (struct sockaddr_in6)) < 0) {
 			*terrno = errno;
 			return close_and_return_error (statp, resplen2);
 		}
@@ -792,7 +638,8 @@ send_vc(res_state statp,
 		niov = 4;
 		explen += INT16SZ + buflen2;
 	}
-	if (TEMP_FAILURE_RETRY (writev(statp->_vcsock, iov, niov)) != explen) {
+	if (TEMP_FAILURE_RETRY (__writev (statp->_vcsock, iov, niov))
+	    != explen) {
 		*terrno = errno;
 		return close_and_return_error (statp, resplen2);
 	}
@@ -948,19 +795,19 @@ static int
 reopen (res_state statp, int *terrno, int ns)
 {
 	if (EXT(statp).nssocks[ns] == -1) {
-		struct sockaddr *nsap = get_nsaddr (statp, ns);
+		struct sockaddr *nsap = __res_get_nsaddr (statp, ns);
 		socklen_t slen;
 
 		/* only try IPv6 if IPv6 NS and if not failed before */
 		if (nsap->sa_family == AF_INET6 && !statp->ipv6_unavail) {
-			EXT(statp).nssocks[ns] = socket
+			EXT (statp).nssocks[ns] = __socket
 			  (PF_INET6,
 			   SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
 			if (EXT(statp).nssocks[ns] < 0)
 			    statp->ipv6_unavail = errno == EAFNOSUPPORT;
 			slen = sizeof (struct sockaddr_in6);
 		} else if (nsap->sa_family == AF_INET) {
-			EXT(statp).nssocks[ns] = socket
+			EXT (statp).nssocks[ns] = __socket
 			  (PF_INET,
 			   SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
 			slen = sizeof (struct sockaddr_in);
@@ -1001,7 +848,7 @@ reopen (res_state statp, int *terrno, int ns)
 		   the call to connect with slen.  */
 		DIAG_PUSH_NEEDS_COMMENT;
 		DIAG_IGNORE_Os_NEEDS_COMMENT (5, "-Wmaybe-uninitialized");
-		if (connect(EXT(statp).nssocks[ns], nsap, slen) < 0) {
+		if (__connect (EXT (statp).nssocks[ns], nsap, slen) < 0) {
 		DIAG_POP_NEEDS_COMMENT;
 			__res_iclose(statp, false);
 			return (0);
@@ -1254,9 +1101,9 @@ send_dg(res_state statp,
 		  try_send:
 #endif
 		    if (nwritten != 0)
-		      sr = send (pfd[0].fd, buf2, buflen2, MSG_NOSIGNAL);
+		      sr = __send (pfd[0].fd, buf2, buflen2, MSG_NOSIGNAL);
 		    else
-		      sr = send (pfd[0].fd, buf, buflen, MSG_NOSIGNAL);
+		      sr = __send (pfd[0].fd, buf, buflen, MSG_NOSIGNAL);
 
 		    if (sr != (nwritten != 0 ? buflen2 : buflen)) {
 		      if (errno == EINTR || errno == EAGAIN)
@@ -1297,7 +1144,7 @@ send_dg(res_state statp,
 		    && (thisansp != NULL && thisansp != ansp)
 #ifdef FIONREAD
 		    /* Is the size too small?  */
-		    && (ioctl (pfd[0].fd, FIONREAD, thisresplenp) < 0
+		    && (__ioctl (pfd[0].fd, FIONREAD, thisresplenp) < 0
 			|| *thisanssizp < *thisresplenp)
 #endif
                     ) {
@@ -1324,9 +1171,10 @@ send_dg(res_state statp,
 		HEADER *anhp = (HEADER *) *thisansp;
 		socklen_t fromlen = sizeof(struct sockaddr_in6);
 		assert (sizeof(from) <= fromlen);
-		*thisresplenp = recvfrom(pfd[0].fd, (char*)*thisansp,
-					 *thisanssizp, 0,
-					(struct sockaddr *)&from, &fromlen);
+		*thisresplenp = __recvfrom (pfd[0].fd, (char *) *thisansp,
+					    *thisanssizp, 0,
+					    (struct sockaddr *) &from,
+					    &fromlen);
 		if (__glibc_unlikely (*thisresplenp <= 0))       {
 			if (errno == EINTR || errno == EAGAIN) {
 				need_recompute = 1;
@@ -1343,24 +1191,20 @@ send_dg(res_state statp,
 			return close_and_return_error (statp, resplen2);
 		}
 
-		/* Paranoia check.  Due to the connected UDP socket,
-		   the kernel has already filtered invalid addresses
-		   for us.  */
-		if (!res_ourserver_p(statp, &from))
-		  goto wait;
-
 		/* Check for the correct header layout and a matching
 		   question.  */
 		int matching_query = 0; /* Default to no matching query.  */
 		if (!recvresp1
 		    && anhp->id == hp->id
-		    && res_queriesmatch (buf, buf + buflen,
-					 *thisansp, *thisansp + *thisanssizp))
+		    && __libc_res_queriesmatch (buf, buf + buflen,
+						*thisansp,
+						*thisansp + *thisanssizp))
 		  matching_query = 1;
 		if (!recvresp2
 		    && anhp->id == hp2->id
-		    && res_queriesmatch (buf2, buf2 + buflen2,
-					 *thisansp, *thisansp + *thisanssizp))
+		    && __libc_res_queriesmatch (buf2, buf2 + buflen2,
+						*thisansp,
+						*thisansp + *thisanssizp))
 		  matching_query = 2;
 		if (matching_query == 0)
 		  /* Spurious UDP packet.  Drop it and continue

@@ -31,8 +31,6 @@ extern struct hostent *_gethtbyname2 (const char *__name, int __af);
 struct hostent *_gethtbyaddr (const char *addr, size_t __len, int __af);
 extern uint32_t _getlong (const unsigned char *__src);
 extern uint16_t _getshort (const unsigned char *__src);
-extern int res_ourserver_p (const res_state __statp,
-			    const struct sockaddr_in6 *__inp);
 extern void __res_iclose (res_state statp, bool free_addr);
 libc_hidden_proto (__res_ninit)
 libc_hidden_proto (__res_nclose)
@@ -44,11 +42,6 @@ libresolv_hidden_proto (_sethtent)
 libresolv_hidden_proto (_gethtent)
 libresolv_hidden_proto (_gethtbyaddr)
 libresolv_hidden_proto (_gethtbyname2)
-libresolv_hidden_proto (__dn_expand)
-libresolv_hidden_proto (__dn_comp)
-libresolv_hidden_proto (__dn_skipname)
-libresolv_hidden_proto (__res_hnok)
-libresolv_hidden_proto (__res_dnok)
 libresolv_hidden_proto (__putlong)
 libresolv_hidden_proto (__putshort)
 libresolv_hidden_proto (__p_cdnname)
@@ -61,10 +54,21 @@ libresolv_hidden_proto (__p_type)
 libresolv_hidden_proto (__loc_ntoa)
 libresolv_hidden_proto (__fp_nquery)
 libresolv_hidden_proto (__fp_query)
-libresolv_hidden_proto (__res_nameinquery)
-libresolv_hidden_proto (__res_queriesmatch)
 libresolv_hidden_proto (__b64_ntop)
 libresolv_hidden_proto (__dn_count_labels)
+
+extern __typeof (dn_expand) __libc_dn_expand;
+libc_hidden_proto (__libc_dn_expand)
+extern __typeof (dn_skipname) __libc_dn_skipname;
+libc_hidden_proto (__libc_dn_skipname)
+extern __typeof (res_dnok) __libc_res_dnok;
+libc_hidden_proto (__libc_res_dnok)
+extern __typeof (res_hnok) __libc_res_hnok;
+libc_hidden_proto (__libc_res_hnok)
+extern __typeof (__res_nameinquery) __libc_res_nameinquery;
+libc_hidden_proto (__libc_res_nameinquery)
+extern __typeof (__res_queriesmatch) __libc_res_queriesmatch;
+libc_hidden_proto (__libc_res_queriesmatch)
 
 # endif /* _RESOLV_H_ && !_ISOMAC */
 #endif

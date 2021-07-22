@@ -34,10 +34,4 @@ __nss_files_functions (nss_module_functions_untyped pointers)
 #undef DEFINE_NSS_FUNCTION
 #define DEFINE_NSS_FUNCTION(x) *fptr++ = _nss_files_##x;
 #include "function.def"
-
-#ifdef PTR_MANGLE
-  void **end = fptr;
-  for (fptr = pointers; fptr != end; ++fptr)
-    PTR_MANGLE (*fptr);
-#endif
 }

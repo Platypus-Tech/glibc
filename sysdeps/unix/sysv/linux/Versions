@@ -209,6 +209,7 @@ libc {
     __ctime64;
     __ctime64_r;
     __difftime64;
+    __fcntl_time64;
     __fstat64_time64;
     __fstatat64_time64;
     __futimens64;
@@ -229,6 +230,7 @@ libc {
     __globfree64_time64;
     __gmtime64;
     __gmtime64_r;
+    __ioctl_time64;
     __localtime64;
     __localtime64_r;
     __lstat64_time64;
@@ -243,6 +245,7 @@ libc {
     __ntp_gettime64;
     __ntp_gettimex64;
     __ppoll64;
+    __prctl_time64;
     __pselec64;
     __pselect64;
     __pthread_clockjoin_np64;
@@ -256,12 +259,15 @@ libc {
     __pthread_rwlock_timedwrlock64;
     __pthread_timedjoin_np64;
     __recvmmsg64;
+    __recvmsg64;
     __sched_rr_get_interval64;
     __select64;
     __sem_clockwait64;
     __semctl64;
     __semtimedop64;
     __sem_timedwait64;
+    __sendmmsg64;
+    __sendmsg64;
     __setitimer64;
     __settimeofday64;
     __shmctl64;

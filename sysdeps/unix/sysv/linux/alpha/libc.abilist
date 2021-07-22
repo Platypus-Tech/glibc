@@ -124,6 +124,8 @@ GLIBC_2.0 __divl F
 GLIBC_2.0 __divlu F
 GLIBC_2.0 __divq F
 GLIBC_2.0 __divqu F
+GLIBC_2.0 __dn_comp F
+GLIBC_2.0 __dn_skipname F
 GLIBC_2.0 __dup2 F
 GLIBC_2.0 __environ D 0x8
 GLIBC_2.0 __errno_location F
@@ -211,7 +213,12 @@ GLIBC_2.0 __reml F
 GLIBC_2.0 __remlu F
 GLIBC_2.0 __remq F
 GLIBC_2.0 __remqu F
+GLIBC_2.0 __res_dnok F
+GLIBC_2.0 __res_hnok F
+GLIBC_2.0 __res_mailok F
+GLIBC_2.0 __res_ownok F
 GLIBC_2.0 __res_randomid F
+GLIBC_2.0 __res_send F
 GLIBC_2.0 __sbrk F
 GLIBC_2.0 __sched_get_priority_max F
 GLIBC_2.0 __sched_get_priority_min F
@@ -414,6 +421,7 @@ GLIBC_2.0 dlclose F
 GLIBC_2.0 dlerror F
 GLIBC_2.0 dlopen F
 GLIBC_2.0 dlsym F
+GLIBC_2.0 dn_expand F
 GLIBC_2.0 dprintf F
 GLIBC_2.0 drand48 F
 GLIBC_2.0 drand48_r F
@@ -996,6 +1004,10 @@ GLIBC_2.0 remove F
 GLIBC_2.0 remque F
 GLIBC_2.0 rename F
 GLIBC_2.0 res_init F
+GLIBC_2.0 res_mkquery F
+GLIBC_2.0 res_query F
+GLIBC_2.0 res_querydomain F
+GLIBC_2.0 res_search F
 GLIBC_2.0 revoke F
 GLIBC_2.0 rewind F
 GLIBC_2.0 rewinddir F
@@ -1945,6 +1957,7 @@ GLIBC_2.2 __ctype32_tolower D 0x8
 GLIBC_2.2 __ctype32_toupper D 0x8
 GLIBC_2.2 __cyg_profile_func_enter F
 GLIBC_2.2 __cyg_profile_func_exit F
+GLIBC_2.2 __dn_expand F
 GLIBC_2.2 __endmntent F
 GLIBC_2.2 __fbufsize F
 GLIBC_2.2 __flbf F
@@ -1968,8 +1981,17 @@ GLIBC_2.2 __pthread_rwlock_unlock F
 GLIBC_2.2 __pthread_rwlock_wrlock F
 GLIBC_2.2 __pwrite64 F
 GLIBC_2.2 __res_init F
+GLIBC_2.2 __res_mkquery F
 GLIBC_2.2 __res_nclose F
 GLIBC_2.2 __res_ninit F
+GLIBC_2.2 __res_nmkquery F
+GLIBC_2.2 __res_nquery F
+GLIBC_2.2 __res_nquerydomain F
+GLIBC_2.2 __res_nsearch F
+GLIBC_2.2 __res_nsend F
+GLIBC_2.2 __res_query F
+GLIBC_2.2 __res_querydomain F
+GLIBC_2.2 __res_search F
 GLIBC_2.2 __res_state F
 GLIBC_2.2 __setmntent F
 GLIBC_2.2 __statfs F
@@ -2523,6 +2545,9 @@ GLIBC_2.34 dlmopen F
 GLIBC_2.34 dlopen F
 GLIBC_2.34 dlsym F
 GLIBC_2.34 dlvsym F
+GLIBC_2.34 dn_comp F
+GLIBC_2.34 dn_expand F
+GLIBC_2.34 dn_skipname F
 GLIBC_2.34 execveat F
 GLIBC_2.34 forkpty F
 GLIBC_2.34 gai_cancel F
@@ -2551,6 +2576,13 @@ GLIBC_2.34 mtx_lock F
 GLIBC_2.34 mtx_timedlock F
 GLIBC_2.34 mtx_trylock F
 GLIBC_2.34 mtx_unlock F
+GLIBC_2.34 ns_name_compress F
+GLIBC_2.34 ns_name_ntop F
+GLIBC_2.34 ns_name_pack F
+GLIBC_2.34 ns_name_pton F
+GLIBC_2.34 ns_name_skip F
+GLIBC_2.34 ns_name_uncompress F
+GLIBC_2.34 ns_name_unpack F
 GLIBC_2.34 openpty F
 GLIBC_2.34 posix_spawn_file_actions_addclosefrom_np F
 GLIBC_2.34 pthread_attr_getaffinity_np F
@@ -2638,6 +2670,20 @@ GLIBC_2.34 pthread_spin_unlock F
 GLIBC_2.34 pthread_testcancel F
 GLIBC_2.34 pthread_timedjoin_np F
 GLIBC_2.34 pthread_tryjoin_np F
+GLIBC_2.34 res_dnok F
+GLIBC_2.34 res_hnok F
+GLIBC_2.34 res_mailok F
+GLIBC_2.34 res_mkquery F
+GLIBC_2.34 res_nmkquery F
+GLIBC_2.34 res_nquery F
+GLIBC_2.34 res_nquerydomain F
+GLIBC_2.34 res_nsearch F
+GLIBC_2.34 res_nsend F
+GLIBC_2.34 res_ownok F
+GLIBC_2.34 res_query F
+GLIBC_2.34 res_querydomain F
+GLIBC_2.34 res_search F
+GLIBC_2.34 res_send F
 GLIBC_2.34 sem_clockwait F
 GLIBC_2.34 sem_close F
 GLIBC_2.34 sem_destroy F
@@ -2985,4 +3031,11 @@ GLIBC_2.8 timerfd_settime F
 GLIBC_2.9 dup3 F
 GLIBC_2.9 epoll_create1 F
 GLIBC_2.9 inotify_init1 F
+GLIBC_2.9 ns_name_compress F
+GLIBC_2.9 ns_name_ntop F
+GLIBC_2.9 ns_name_pack F
+GLIBC_2.9 ns_name_pton F
+GLIBC_2.9 ns_name_skip F
+GLIBC_2.9 ns_name_uncompress F
+GLIBC_2.9 ns_name_unpack F
 GLIBC_2.9 pipe2 F

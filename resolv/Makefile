@@ -27,9 +27,46 @@ headers	:= resolv.h bits/types/res_state.h \
 	   arpa/nameser.h arpa/nameser_compat.h \
 	   sys/bitypes.h
 
-routines := herror inet_addr inet_ntop inet_pton nsap_addr res_init \
-	    res_hconf res_libc res-state res_randomid res-close \
-	    resolv_context resolv_conf
+routines := \
+  dn_comp \
+  dn_expand \
+  dn_skipname \
+  dns-canon \
+  dns-host \
+  dns-network \
+  herror \
+  inet_addr \
+  inet_ntop \
+  inet_pton \
+  ns_makecanon \
+  ns_name_compress \
+  ns_name_ntop \
+  ns_name_pack \
+  ns_name_pton \
+  ns_name_skip \
+  ns_name_uncompress \
+  ns_name_unpack \
+  ns_samename \
+  nsap_addr \
+  nss_dns_functions \
+  res-close \
+  res-name-checking \
+  res-state \
+  res_context_hostalias \
+  res_enable_icmp \
+  res_get_nsaddr \
+  res_hconf \
+  res_init \
+  res_libc \
+  res_mkquery \
+  res_nameinquery \
+  res_queriesmatch \
+  res_query \
+  res_randomid \
+  res_send \
+  resolv_conf \
+  resolv_context \
+  # routines
 
 tests = tst-aton tst-leaks tst-inet_ntop
 tests-container = tst-leaks2
@@ -105,15 +142,36 @@ xtests += tst-resolv-qtypes
 xtests += tst-resolv-rotate
 endif
 extra-libs-others = $(extra-libs)
-libresolv-routines := res_comp res_debug \
-		      res_data res_mkquery res_query res_send		\
-		      inet_net_ntop inet_net_pton inet_neta base64	\
-		      ns_parse ns_name ns_netint ns_ttl ns_print	\
-		      ns_samedomain ns_date res_enable_icmp \
-		      compat-hooks compat-gethnamaddr
+libresolv-routines := \
+  base64 \
+  compat-gethnamaddr \
+  compat-hooks \
+  inet_net_ntop \
+  inet_net_pton \
+  inet_neta \
+  ns_date \
+  ns_name \
+  ns_netint \
+  ns_parse \
+  ns_print \
+  ns_samedomain \
+  ns_ttl \
+  res-putget \
+  res_data \
+  res_debug \
+  res_hostalias \
+  res_isourserver \
+  resolv-deprecated \
+  # libresolv-routines
 
 $(libanl-routines-var) += \
-  gai_cancel gai_error gai_misc gai_notify gai_suspend getaddrinfo_a
+  gai_cancel \
+  gai_error \
+  gai_misc \
+  gai_notify \
+  gai_suspend \
+  getaddrinfo_a \
+  # $(libanl-routines-var)
 
 libanl-routines += libanl-compat
 libanl-shared-only-routines += libanl-compat
@@ -121,12 +179,13 @@ libanl-shared-only-routines += libanl-compat
 subdir-dirs = nss_dns
 vpath %.c nss_dns
 
-libnss_dns-routines	:= dns-host dns-network dns-canon
-libnss_dns-inhibit-o	= $(filter-out .os,$(object-suffixes))
-ifeq ($(build-static-nss),yes)
-routines                += $(libnss_dns-routines) $(libresolv-routines)
-static-only-routines    += $(libnss_dns-routines) $(libresolv-routines)
-endif
+# Build only an empty shared libnss_dns.
+libnss_dns-inhibit-o = $(filter-out .os,$(object-suffixes))
+
+# Pretend that libnss_dns.so is a linker script, so that the symbolic link
+# is not installed.
+install-lib-ldscripts = libnss_dns.so
+$(inst_libdir)/libnss_dns.so:
 
 ifeq ($(run-built-tests),yes)
 ifneq (no,$(PERL))

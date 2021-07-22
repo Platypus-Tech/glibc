@@ -82,6 +82,7 @@
 
 #include "nsswitch.h"
 #include <arpa/nameser.h>
+#include <nss_dns.h>
 
 #include <resolv/resolv-internal.h>
 #include <resolv/resolv_context.h>
@@ -89,8 +90,6 @@
 /* Get implementations of some internal functions.  */
 #include <resolv/mapv4v6addr.h>
 #include <resolv/mapv4v6hostent.h>
-
-NSS_DECLARE_MODULE_FUNCTIONS (dns)
 
 #define RESOLVSORT
 
@@ -169,6 +168,7 @@ _nss_dns_gethostbyname3_r (const char *name, int af, struct hostent *result,
   __resolv_context_put (ctx);
   return status;
 }
+libc_hidden_def (_nss_dns_gethostbyname3_r)
 
 static enum nss_status
 gethostbyname3_context (struct resolv_context *ctx,
@@ -283,7 +283,7 @@ gethostbyname3_context (struct resolv_context *ctx,
 static enum nss_status
 check_name (const char *name, int *h_errnop)
 {
-  if (res_hnok (name))
+  if (__libc_res_hnok (name))
     return NSS_STATUS_SUCCESS;
   *h_errnop = HOST_NOT_FOUND;
   return NSS_STATUS_NOTFOUND;
@@ -300,7 +300,7 @@ _nss_dns_gethostbyname2_r (const char *name, int af, struct hostent *result,
   return _nss_dns_gethostbyname3_r (name, af, result, buffer, buflen, errnop,
 				    h_errnop, NULL, NULL);
 }
-
+libc_hidden_def (_nss_dns_gethostbyname2_r)
 
 enum nss_status
 _nss_dns_gethostbyname_r (const char *name, struct hostent *result,
@@ -327,7 +327,7 @@ _nss_dns_gethostbyname_r (const char *name, struct hostent *result,
   __resolv_context_put (ctx);
   return status;
 }
-
+libc_hidden_def (_nss_dns_gethostbyname_r)
 
 enum nss_status
 _nss_dns_gethostbyname4_r (const char *name, struct gaih_addrtuple **pat,
@@ -419,15 +419,7 @@ _nss_dns_gethostbyname4_r (const char *name, struct gaih_addrtuple **pat,
   __resolv_context_put (ctx);
   return status;
 }
-
-
-extern enum nss_status _nss_dns_gethostbyaddr2_r (const void *addr,
-						  socklen_t len, int af,
-						  struct hostent *result,
-						  char *buffer, size_t buflen,
-						  int *errnop, int *h_errnop,
-						  int32_t *ttlp);
-hidden_proto (_nss_dns_gethostbyaddr2_r)
+libc_hidden_def (_nss_dns_gethostbyname4_r)
 
 enum nss_status
 _nss_dns_gethostbyaddr2_r (const void *addr, socklen_t len, int af,
@@ -568,7 +560,7 @@ _nss_dns_gethostbyaddr2_r (const void *addr, socklen_t len, int af,
   __resolv_context_put (ctx);
   return NSS_STATUS_SUCCESS;
 }
-hidden_def (_nss_dns_gethostbyaddr2_r)
+libc_hidden_def (_nss_dns_gethostbyaddr2_r)
 
 
 enum nss_status
@@ -579,6 +571,7 @@ _nss_dns_gethostbyaddr_r (const void *addr, socklen_t len, int af,
   return _nss_dns_gethostbyaddr2_r (addr, len, af, result, buffer, buflen,
 				    errnop, h_errnop, NULL);
 }
+libc_hidden_def (_nss_dns_gethostbyaddr_r)
 
 static void
 addrsort (struct resolv_context *ctx, char **ap, int num)
@@ -672,10 +665,10 @@ getanswer_r (struct resolv_context *ctx,
     {
     case T_A:
     case T_AAAA:
-      name_ok = res_hnok;
+      name_ok = __libc_res_hnok;
       break;
     case T_PTR:
-      name_ok = res_dnok;
+      name_ok = __libc_res_dnok;
       break;
     default:
       *errnop = ENOENT;
@@ -782,14 +775,11 @@ getanswer_r (struct resolv_context *ctx,
 	  continue;
 	}
 
-      type = __ns_get16 (cp);
-      cp += INT16SZ;			/* type */
-      class = __ns_get16 (cp);
-      cp += INT16SZ;			/* class */
-      int32_t ttl = __ns_get32 (cp);
-      cp += INT32SZ;			/* TTL */
-      n = __ns_get16 (cp);
-      cp += INT16SZ;			/* len */
+      NS_GET16 (type, cp);
+      NS_GET16 (class, cp);
+      int32_t ttl;
+      NS_GET32 (ttl, cp);
+      NS_GET16 (n, cp);		/* RDATA length.  */
 
       if (end_of_message - cp < n)
 	{
@@ -813,7 +803,8 @@ getanswer_r (struct resolv_context *ctx,
 
 	  if (ap >= &host_data->aliases[MAX_NR_ALIASES - 1])
 	    continue;
-	  n = dn_expand (answer->buf, end_of_message, cp, tbuf, sizeof tbuf);
+	  n = __libc_dn_expand (answer->buf, end_of_message, cp,
+				tbuf, sizeof tbuf);
 	  if (__glibc_unlikely (n < 0 || (*name_ok) (tbuf) == 0))
 	    {
 	      ++had_error;
@@ -851,8 +842,9 @@ getanswer_r (struct resolv_context *ctx,
 	  if (ttlp != NULL && ttl < *ttlp)
 	      *ttlp = ttl;
 
-	  n = dn_expand (answer->buf, end_of_message, cp, tbuf, sizeof tbuf);
-	  if (__glibc_unlikely (n < 0 || res_dnok (tbuf) == 0))
+	  n = __libc_dn_expand (answer->buf, end_of_message, cp,
+				tbuf, sizeof tbuf);
+	  if (__glibc_unlikely (n < 0 || __libc_res_dnok (tbuf) == 0))
 	    {
 	      ++had_error;
 	      continue;
@@ -884,7 +876,7 @@ getanswer_r (struct resolv_context *ctx,
       switch (type)
 	{
 	case T_PTR:
-	  if (__glibc_unlikely (strcasecmp (tname, bp) != 0))
+	  if (__glibc_unlikely (__strcasecmp (tname, bp) != 0))
 	    {
 	      cp += n;
 	      continue;			/* XXX - had_error++ ? */
@@ -900,7 +892,7 @@ getanswer_r (struct resolv_context *ctx,
 	      n = -1;
 	    }
 
-	  if (__glibc_unlikely (n < 0 || res_hnok (bp) == 0))
+	  if (__glibc_unlikely (n < 0 || __libc_res_hnok (bp) == 0))
 	    {
 	      ++had_error;
 	      break;
@@ -914,7 +906,7 @@ getanswer_r (struct resolv_context *ctx,
 	  return NSS_STATUS_SUCCESS;
 	case T_A:
 	case T_AAAA:
-	  if (__glibc_unlikely (strcasecmp (result->h_name, bp) != 0))
+	  if (__glibc_unlikely (__strcasecmp (result->h_name, bp) != 0))
 	    {
 	      cp += n;
 	      continue;			/* XXX - had_error++ ? */
@@ -1063,7 +1055,7 @@ gaih_getanswer_slice (const querybuf *answer, int anslen, const char *qname,
       *h_errnop = NO_RECOVERY;
       return NSS_STATUS_UNAVAIL;
     }
-  if (__glibc_unlikely (res_hnok (buffer) == 0))
+  if (__glibc_unlikely (__libc_res_hnok (buffer) == 0))
     {
       errno = EBADMSG;
       *errnop = EBADMSG;
@@ -1096,7 +1088,7 @@ gaih_getanswer_slice (const querybuf *answer, int anslen, const char *qname,
 
 	  n = -1;
 	}
-      if (__glibc_unlikely (n < 0 || res_hnok (buffer) == 0))
+      if (__glibc_unlikely (n < 0 || __libc_res_hnok (buffer) == 0))
 	{
 	  ++had_error;
 	  continue;
@@ -1116,14 +1108,13 @@ gaih_getanswer_slice (const querybuf *answer, int anslen, const char *qname,
 	  continue;
 	}
 
-      int type = __ns_get16 (cp);
-      cp += INT16SZ;			/* type */
-      int class = __ns_get16 (cp);
-      cp += INT16SZ;			/* class */
-      int32_t ttl = __ns_get32 (cp);
-      cp += INT32SZ;			/* TTL */
-      n = __ns_get16 (cp);
-      cp += INT16SZ;			/* len */
+      uint16_t type;
+      NS_GET16 (type, cp);
+      uint16_t class;
+      NS_GET16 (class, cp);
+      int32_t ttl;
+      NS_GET32 (ttl, cp);
+      NS_GET16 (n, cp);		/* RDATA length.  */
 
       if (end_of_message - cp < n)
 	{
@@ -1146,8 +1137,9 @@ gaih_getanswer_slice (const querybuf *answer, int anslen, const char *qname,
 	  if (ttlp != NULL && ttl < *ttlp)
 	      *ttlp = ttl;
 
-	  n = dn_expand (answer->buf, end_of_message, cp, tbuf, sizeof tbuf);
-	  if (__glibc_unlikely (n < 0 || res_hnok (tbuf) == 0))
+	  n = __libc_dn_expand (answer->buf, end_of_message, cp,
+				tbuf, sizeof tbuf);
+	  if (__glibc_unlikely (n < 0 || __libc_res_hnok (tbuf) == 0))
 	    {
 	      ++had_error;
 	      continue;

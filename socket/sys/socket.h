@@ -170,8 +170,20 @@ extern ssize_t recvfrom (int __fd, void *__restrict __buf, size_t __n,
 
    This function is a cancellation point and therefore not marked with
    __THROW.  */
+#ifndef __USE_TIME_BITS64
 extern ssize_t sendmsg (int __fd, const struct msghdr *__message,
 			int __flags);
+#else
+# ifdef __REDIRECT
+extern ssize_t __REDIRECT (sendmsg, (int __fd, const struct msghdr *__message,
+				     int __flags),
+			   __sendmsg64);
+# else
+extern ssize_t __sendmsg64 (int __fd, const struct msghdr *__message,
+			    int __flags);
+#  defien sendmsg __sendmsg64
+# endif
+#endif
 
 #ifdef __USE_GNU
 /* Send a VLEN messages as described by VMESSAGES to socket FD.
@@ -179,16 +191,39 @@ extern ssize_t sendmsg (int __fd, const struct msghdr *__message,
 
    This function is a cancellation point and therefore not marked with
    __THROW.  */
+# ifndef __USE_TIME_BITS64
 extern int sendmmsg (int __fd, struct mmsghdr *__vmessages,
 		     unsigned int __vlen, int __flags);
-#endif
+# else
+#  ifdef __REDIRECT
+extern int __REDIRECT (sendmmsg, (int __fd, struct mmsghdr *__vmessages,
+				  unsigned int __vlen, int __flags),
+		       __sendmmsg64);
+#  else
+extern int __sendmmsg64 (int __fd, struct mmsghdr *__vmessages,
+			 unsigned int __vlen, int __flags);
+#   define sendmmsg __sendmmsg64
+#  endif
+# endif	 /* __USE_TIME_BITS64 */
+#endif /* __USE_GNU */
 
 /* Receive a message as described by MESSAGE from socket FD.
    Returns the number of bytes read or -1 for errors.
 
    This function is a cancellation point and therefore not marked with
    __THROW.  */
+#ifndef __USE_TIME_BITS64
 extern ssize_t recvmsg (int __fd, struct msghdr *__message, int __flags);
+#else
+# ifdef __REDIRECT
+extern ssize_t __REDIRECT (recvmsg,
+			   (int __fd, struct msghdr *__message, int __flags),
+			   __recvmsg64);
+# else
+extern ssize_t __recvmsg64 (int __fd, struct msghdr *__message, int __flags);
+#  define recvmsg __recvmsg64
+# endif
+#endif
 
 #ifdef __USE_GNU
 /* Receive up to VLEN messages as described by VMESSAGES from socket FD.
