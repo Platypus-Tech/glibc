@@ -5,7 +5,7 @@ endif
 ifeq ($(subdir),elf)
 sysdep_routines += get-cpuid-feature-leaf
 sysdep-dl-routines += dl-get-cpu-features
-sysdep_headers += sys/platform/x86.h
+sysdep_headers += sys/platform/x86.h bits/platform/x86.h
 
 CFLAGS-get-cpuid-feature-leaf.o += $(no-stack-protector)
 
@@ -19,12 +19,16 @@ ifeq (yes,$(have-ifunc))
 ifeq (yes,$(have-gcc-ifunc))
 tests += \
   tst-ifunc-isa-1 \
-  tst-ifunc-isa-1-static \
+  tst-ifunc-isa-1-static
+tests-static += \
+  tst-ifunc-isa-1-static
+ifneq ($(have-tunables),no)
+tests += \
   tst-ifunc-isa-2 \
   tst-ifunc-isa-2-static
 tests-static += \
-  tst-ifunc-isa-1-static \
   tst-ifunc-isa-2-static
+endif
 endif
 endif
 ifeq (yes,$(enable-x86-isa-level))

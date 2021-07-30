@@ -774,8 +774,6 @@ GLIBC_2.0 lseek F
 GLIBC_2.0 madvise F
 GLIBC_2.0 mallinfo F
 GLIBC_2.0 malloc F
-GLIBC_2.0 malloc_get_state F
-GLIBC_2.0 malloc_set_state F
 GLIBC_2.0 malloc_stats F
 GLIBC_2.0 malloc_trim F
 GLIBC_2.0 malloc_usable_size F
@@ -2472,6 +2470,7 @@ GLIBC_2.34 __futimesat64 F
 GLIBC_2.34 __gai_suspend_time64 F
 GLIBC_2.34 __getitimer64 F
 GLIBC_2.34 __getrusage64 F
+GLIBC_2.34 __getsockopt64 F
 GLIBC_2.34 __gettimeofday64 F
 GLIBC_2.34 __glob64_time64 F
 GLIBC_2.34 __globfree64_time64 F
@@ -2524,6 +2523,7 @@ GLIBC_2.34 __semtimedop64 F
 GLIBC_2.34 __sendmmsg64 F
 GLIBC_2.34 __sendmsg64 F
 GLIBC_2.34 __setitimer64 F
+GLIBC_2.34 __setsockopt64 F
 GLIBC_2.34 __settimeofday64 F
 GLIBC_2.34 __shmctl64 F
 GLIBC_2.34 __sigtimedwait64 F

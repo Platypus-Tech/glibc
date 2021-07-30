@@ -87,7 +87,7 @@ tests		:= test-errno tstgetopt testfnm runtests runptests \
 		   bug-regex29 bug-regex30 bug-regex31 bug-regex32 \
 		   tst-nice tst-nanosleep tst-regex2 \
 		   transbug tst-rxspencer tst-pcre tst-boost \
-		   bug-ga1 tst-vfork1 tst-vfork2 tst-vfork3 \
+		   bug-ga1 tst-vfork1 tst-vfork2 \
 		   tst-waitid tst-wait4 tst-wait3 \
 		   tst-getaddrinfo2 bug-glob2 bug-glob3 tst-sysconf \
 		   tst-execvp1 tst-execvp2 tst-execlp1 tst-execlp2 \
@@ -122,7 +122,7 @@ endif
 
 tests-internal	:= bug-regex5 bug-regex20 bug-regex33 \
 		   tst-rfc3484 tst-rfc3484-2 tst-rfc3484-3
-tests-container := bug-ga2
+tests-container := bug-ga2 tst-vfork3
 tests-time64	:= tst-wait4-time64 tst-wait3-time64 tst-gnuglob64-time64
 xtests		:= tst-getaddrinfo4 tst-getaddrinfo5 tst-sched_rr_get_interval
 xtests-time64	:= tst-sched_rr_get_interval-time64
@@ -313,63 +313,76 @@ annexc-CFLAGS = -O
 $(objpfx)annexc: annexc.c
 	$(native-compile)
 
-tst-fnmatch-ENV += MALLOC_TRACE=$(objpfx)tst-fnmatch.mtrace
+tst-fnmatch-ENV += MALLOC_TRACE=$(objpfx)tst-fnmatch.mtrace \
+		   LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 
 $(objpfx)tst-fnmatch-mem.out: $(objpfx)tst-fnmatch.out
 	$(common-objpfx)malloc/mtrace $(objpfx)tst-fnmatch.mtrace > $@; \
 	$(evaluate-test)
 
-bug-regex2-ENV = MALLOC_TRACE=$(objpfx)bug-regex2.mtrace
+bug-regex2-ENV = MALLOC_TRACE=$(objpfx)bug-regex2.mtrace \
+		 LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 
 $(objpfx)bug-regex2-mem.out: $(objpfx)bug-regex2.out
 	$(common-objpfx)malloc/mtrace $(objpfx)bug-regex2.mtrace > $@; \
 	$(evaluate-test)
 
-bug-regex14-ENV = MALLOC_TRACE=$(objpfx)bug-regex14.mtrace
+bug-regex14-ENV = MALLOC_TRACE=$(objpfx)bug-regex14.mtrace \
+		  LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 
 $(objpfx)bug-regex14-mem.out: $(objpfx)bug-regex14.out
 	$(common-objpfx)malloc/mtrace $(objpfx)bug-regex14.mtrace > $@; \
 	$(evaluate-test)
 
-bug-regex21-ENV = MALLOC_TRACE=$(objpfx)bug-regex21.mtrace
+bug-regex21-ENV = MALLOC_TRACE=$(objpfx)bug-regex21.mtrace \
+		  LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 
 $(objpfx)bug-regex21-mem.out: $(objpfx)bug-regex21.out
 	$(common-objpfx)malloc/mtrace $(objpfx)bug-regex21.mtrace > $@; \
 	$(evaluate-test)
 
-bug-regex31-ENV = MALLOC_TRACE=$(objpfx)bug-regex31.mtrace
+bug-regex31-ENV = MALLOC_TRACE=$(objpfx)bug-regex31.mtrace \
+		  LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 
 $(objpfx)bug-regex31-mem.out: $(objpfx)bug-regex31.out
 	$(common-objpfx)malloc/mtrace $(objpfx)bug-regex31.mtrace > $@; \
 	$(evaluate-test)
 
-bug-regex36-ENV = MALLOC_TRACE=$(objpfx)bug-regex36.mtrace
+bug-regex36-ENV = MALLOC_TRACE=$(objpfx)bug-regex36.mtrace \
+		  LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 
 $(objpfx)bug-regex36-mem.out: $(objpfx)bug-regex36.out
 	$(common-objpfx)malloc/mtrace $(objpfx)bug-regex36.mtrace > $@; \
 	$(evaluate-test)
 
-tst-vfork3-ENV = MALLOC_TRACE=$(objpfx)tst-vfork3.mtrace
+tst-vfork3-ENV = MALLOC_TRACE=$(objpfx)tst-vfork3.mtrace \
+		 LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 
 $(objpfx)tst-vfork3-mem.out: $(objpfx)tst-vfork3.out
-	$(common-objpfx)malloc/mtrace $(objpfx)tst-vfork3.mtrace > $@; \
+	{ test -r $(objpfx)tst-vfork3.mtrace \
+	|| ( echo "tst-vfork3.mtrace does not exist"; exit 77; ) \
+	&& $(common-objpfx)malloc/mtrace $(objpfx)tst-vfork3.mtrace; } > $@; \
 	$(evaluate-test)
 
 # tst-rxspencer.mtrace is not generated, only
 # tst-rxspencer-no-utf8.mtrace, since otherwise the file has almost
 # 100M and takes very long time to process.
-tst-rxspencer-no-utf8-ENV += MALLOC_TRACE=$(objpfx)tst-rxspencer-no-utf8.mtrace
+tst-rxspencer-no-utf8-ENV += \
+  MALLOC_TRACE=$(objpfx)tst-rxspencer-no-utf8.mtrace \
+  LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 $(objpfx)tst-rxspencer-no-utf8-mem.out: $(objpfx)tst-rxspencer-no-utf8.out
 	$(common-objpfx)malloc/mtrace $(objpfx)tst-rxspencer-no-utf8.mtrace \
 				      > $@; \
 	$(evaluate-test)
 
-tst-pcre-ENV = MALLOC_TRACE=$(objpfx)tst-pcre.mtrace
+tst-pcre-ENV = MALLOC_TRACE=$(objpfx)tst-pcre.mtrace \
+	       LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 $(objpfx)tst-pcre-mem.out: $(objpfx)tst-pcre.out
 	$(common-objpfx)malloc/mtrace $(objpfx)tst-pcre.mtrace > $@; \
 	$(evaluate-test)
 
-tst-boost-ENV = MALLOC_TRACE=$(objpfx)tst-boost.mtrace
+tst-boost-ENV = MALLOC_TRACE=$(objpfx)tst-boost.mtrace \
+		LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 $(objpfx)tst-boost-mem.out: $(objpfx)tst-boost.out
 	$(common-objpfx)malloc/mtrace $(objpfx)tst-boost.mtrace > $@; \
 	$(evaluate-test)
@@ -384,15 +397,18 @@ $(objpfx)bug-ga2-mem.out: $(objpfx)bug-ga2.out
 	&& $(common-objpfx)malloc/mtrace $(objpfx)bug-ga2.mtrace; } > $@; \
 	$(evaluate-test)
 
-bug-ga2-ENV = MALLOC_TRACE=$(objpfx)bug-ga2.mtrace
+bug-ga2-ENV = MALLOC_TRACE=$(objpfx)bug-ga2.mtrace \
+	      LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 
-bug-glob2-ENV = MALLOC_TRACE=$(objpfx)bug-glob2.mtrace
+bug-glob2-ENV = MALLOC_TRACE=$(objpfx)bug-glob2.mtrace \
+		LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 
 $(objpfx)bug-glob2-mem.out: $(objpfx)bug-glob2.out
 	$(common-objpfx)malloc/mtrace $(objpfx)bug-glob2.mtrace > $@; \
 	$(evaluate-test)
 
-tst-glob-tilde-ENV = MALLOC_TRACE=$(objpfx)tst-glob-tilde.mtrace
+tst-glob-tilde-ENV = MALLOC_TRACE=$(objpfx)tst-glob-tilde.mtrace \
+		     LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
 
 $(objpfx)tst-glob-tilde-mem.out: $(objpfx)tst-glob-tilde.out
 	$(common-objpfx)malloc/mtrace $(objpfx)tst-glob-tilde.mtrace > $@; \

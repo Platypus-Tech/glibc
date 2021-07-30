@@ -79,7 +79,9 @@ static __thread mstate thread_arena attribute_tls_model_ie;
    acquired after free_list_lock has been acquired.  */
 
 __libc_lock_define_initialized (static, free_list_lock);
+#if IS_IN (libc)
 static size_t narenas = 1;
+#endif
 static mstate free_list;
 
 /* list_lock prevents concurrent writes to the next member of struct
@@ -97,7 +99,7 @@ static mstate free_list;
 __libc_lock_define_initialized (static, list_lock);
 
 /* Already initialized? */
-int __malloc_initialized = -1;
+static bool __malloc_initialized = false;
 
 /**************************************************************************/
 
@@ -143,7 +145,7 @@ int __malloc_initialized = -1;
 void
 __malloc_fork_lock_parent (void)
 {
-  if (__malloc_initialized < 1)
+  if (!__malloc_initialized)
     return;
 
   /* We do not acquire free_list_lock here because we completely
@@ -163,7 +165,7 @@ __malloc_fork_lock_parent (void)
 void
 __malloc_fork_unlock_parent (void)
 {
-  if (__malloc_initialized < 1)
+  if (!__malloc_initialized)
     return;
 
   for (mstate ar_ptr = &main_arena;; )
@@ -179,7 +181,7 @@ __malloc_fork_unlock_parent (void)
 void
 __malloc_fork_unlock_child (void)
 {
-  if (__malloc_initialized < 1)
+  if (!__malloc_initialized)
     return;
 
   /* Push all arenas to the free list, except thread_arena, which is
@@ -207,14 +209,6 @@ __malloc_fork_unlock_child (void)
 }
 
 #if HAVE_TUNABLES
-static void
-TUNABLE_CALLBACK (set_mallopt_check) (tunable_val_t *valp)
-{
-  int32_t value = (int32_t) valp->numval;
-  if (value != 0)
-    __malloc_check_init ();
-}
-
 # define TUNABLE_CALLBACK_FNDECL(__name, __type) \
 static inline int do_ ## __name (__type value);				      \
 static void									      \
@@ -274,14 +268,6 @@ next_env_entry (char ***position)
 #endif
 
 
-#if defined(SHARED) || defined(USE_MTAG)
-static void *
-__failing_morecore (ptrdiff_t d)
-{
-  return (void *) MORECORE_FAILURE;
-}
-#endif
-
 #ifdef SHARED
 extern struct dl_open_hook *_dl_open_hook;
 libc_hidden_proto (_dl_open_hook);
@@ -294,10 +280,10 @@ static void tcache_key_initialize (void);
 static void
 ptmalloc_init (void)
 {
-  if (__malloc_initialized >= 0)
+  if (__malloc_initialized)
     return;
 
-  __malloc_initialized = 0;
+  __malloc_initialized = true;
 
 #if USE_TCACHE
   tcache_key_initialize ();
@@ -310,20 +296,20 @@ ptmalloc_init (void)
 	 and that morecore does not support tagged regions, then
 	 disable it.  */
       if (__MTAG_SBRK_UNTAGGED)
-	__morecore = __failing_morecore;
+	__always_fail_morecore = true;
 
       mtag_enabled = true;
       mtag_mmap_flags = __MTAG_MMAP_FLAGS;
     }
 #endif
 
-#ifdef SHARED
+#if defined SHARED && IS_IN (libc)
   /* In case this libc copy is in a non-default namespace, never use
      brk.  Likewise if dlopened from statically linked program.  The
      generic sbrk implementation also enforces this, but it is not
      used on Hurd.  */
   if (!__libc_initial)
-    __morecore = __failing_morecore;
+    __always_fail_morecore = true;
 #endif
 
   thread_arena = &main_arena;
@@ -331,7 +317,6 @@ ptmalloc_init (void)
   malloc_init_state (&main_arena);
 
 #if HAVE_TUNABLES
-  TUNABLE_GET (check, int32_t, TUNABLE_CALLBACK (set_mallopt_check));
   TUNABLE_GET (top_pad, size_t, TUNABLE_CALLBACK (set_top_pad));
   TUNABLE_GET (perturb, int32_t, TUNABLE_CALLBACK (set_perturb_byte));
   TUNABLE_GET (mmap_threshold, size_t, TUNABLE_CALLBACK (set_mmap_threshold));
@@ -347,7 +332,6 @@ ptmalloc_init (void)
 # endif
   TUNABLE_GET (mxfast, size_t, TUNABLE_CALLBACK (set_mxfast));
 #else
-  const char *s = NULL;
   if (__glibc_likely (_environ != NULL))
     {
       char **runp = _environ;
@@ -366,10 +350,6 @@ ptmalloc_init (void)
 
           switch (len)
             {
-            case 6:
-              if (memcmp (envline, "CHECK_", 6) == 0)
-                s = &envline[7];
-              break;
             case 8:
               if (!__builtin_expect (__libc_enable_secure, 0))
                 {
@@ -409,16 +389,7 @@ ptmalloc_init (void)
             }
         }
     }
-  if (s && s[0] != '\0' && s[0] != '0')
-    __malloc_check_init ();
 #endif
-
-#if HAVE_MALLOC_INIT_HOOK
-  void (*hook) (void) = atomic_forced_read (__malloc_initialize_hook);
-  if (hook != NULL)
-    (*hook)();
-#endif
-  __malloc_initialized = 1;
 }
 
 /* Managing heaps and arenas (for concurrent threads) */
@@ -687,6 +658,7 @@ heap_trim (heap_info *heap, size_t pad)
 
 /* Create a new arena with initial size "size".  */
 
+#if IS_IN (libc)
 /* If REPLACED_ARENA is not NULL, detach it from this thread.  Must be
    called while free_list_lock is held.  */
 static void
@@ -962,6 +934,7 @@ arena_get_retry (mstate ar_ptr, size_t bytes)
 
   return ar_ptr;
 }
+#endif
 
 void
 __malloc_arena_thread_freeres (void)
