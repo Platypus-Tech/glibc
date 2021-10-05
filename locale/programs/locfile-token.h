@@ -1,6 +1,5 @@
 /* Copyright (C) 1996-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
-   Contributed by Ulrich Drepper <drepper@gnu.org>, 1996.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published
@@ -91,6 +90,7 @@ enum token_t
   tok_translit_ignore,
   tok_default_missing,
   tok_lc_collate,
+  tok_codepoint_collation,
   tok_coll_weight_max,
   tok_section_symbol,
   tok_collating_element,

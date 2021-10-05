@@ -1,6 +1,5 @@
 /* Copyright (C) 1999-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
-   Contributed by Andreas Jaeger <aj@suse.de>, 1999.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published
@@ -503,7 +502,11 @@ add_dir_1 (const char *line, const char *from_file, int from_line)
     entry->path[--i] = '\0';
 
   if (i == 0)
-    return;
+    {
+      free (entry->path);
+      free (entry);
+      return;
+    }
 
   char *path = entry->path;
   if (opt_chroot != NULL)

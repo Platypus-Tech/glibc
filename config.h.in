@@ -62,12 +62,6 @@
 /* Define if _rtld_local structure should be forced into .sdata section.  */
 #undef	HAVE_SDATA_SECTION
 
-/* Define if compiler supports AVX512.  */
-#undef  HAVE_AVX512_SUPPORT
-
-/* Define if assembler supports AVX512DQ.  */
-#undef  HAVE_AVX512DQ_ASM_SUPPORT
-
 /* Define if assembler supports z10 zarch instructions as default on S390.  */
 #undef  HAVE_S390_MIN_Z10_ZARCH_ASM_SUPPORT
 
@@ -197,9 +191,6 @@
 
 /* Define if CC supports attribute retain.  */
 #undef HAVE_GNU_RETAIN
-
-/* Define if the linker defines __ehdr_start.  */
-#undef HAVE_EHDR_START
 
 /* Define to 1 if the assembler needs intermediate aliases to define
    multiple symbol versions for one symbol.  */

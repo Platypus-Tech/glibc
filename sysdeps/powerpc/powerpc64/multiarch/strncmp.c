@@ -38,12 +38,13 @@ extern __typeof (strncmp) __strncmp_power9 attribute_hidden;
    ifunc symbol properly.  */
 libc_ifunc_redirected (__redirect_strncmp, strncmp,
 # ifdef __LITTLE_ENDIAN__
-			(hwcap2 & PPC_FEATURE2_ARCH_3_00)
+			(hwcap2 & PPC_FEATURE2_ARCH_3_00
+			 && hwcap & PPC_FEATURE_HAS_ALTIVEC)
 			? __strncmp_power9 :
 # endif
 		       (hwcap2 & PPC_FEATURE2_ARCH_2_07)
 		       ? __strncmp_power8
-		       : (hwcap & PPC_FEATURE_HAS_VSX)
+		       : (hwcap & PPC_FEATURE_ARCH_2_06)
 			 ? __strncmp_power7
 			 : (hwcap & PPC_FEATURE_POWER4)
 			   ? __strncmp_power4

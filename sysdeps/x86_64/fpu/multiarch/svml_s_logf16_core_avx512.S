@@ -22,9 +22,6 @@
 
 	.text
 ENTRY (_ZGVeN16v_logf_knl)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512 _ZGVdN8v_logf
-#else
 /*
    ALGORITHM DESCRIPTION:
 
@@ -207,13 +204,9 @@ WRAPPER_IMPL_AVX512 _ZGVdN8v_logf
         call      JUMPTARGET(logf)
         vmovss    %xmm0, 1216(%rsp,%r15,8)
         jmp       .LBL_1_7
-#endif
 END (_ZGVeN16v_logf_knl)
 
 ENTRY (_ZGVeN16v_logf_skx)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512 _ZGVdN8v_logf
-#else
 /*
    ALGORITHM DESCRIPTION:
 
@@ -235,7 +228,7 @@ WRAPPER_IMPL_AVX512 _ZGVdN8v_logf
         andq      $-64, %rsp
         subq      $1280, %rsp
         movq      __svml_slog_data@GOTPCREL(%rip), %rax
-        vmovups   .L_2il0floatpacket.7(%rip), %zmm6
+        vpternlogd $0xff, %zmm6, %zmm6, %zmm6
         vmovups _iBrkValue(%rax), %zmm4
         vmovups _sPoly_7(%rax), %zmm8
 
@@ -407,10 +400,4 @@ WRAPPER_IMPL_AVX512 _ZGVdN8v_logf
         vmovss    %xmm0, 1216(%rsp,%r15,8)
         jmp       .LBL_2_7
 
-#endif
 END (_ZGVeN16v_logf_skx)
-
-	.section .rodata, "a"
-.L_2il0floatpacket.7:
-	.long	0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff
-	.type	.L_2il0floatpacket.7,@object

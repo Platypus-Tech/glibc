@@ -949,7 +949,7 @@ _dl_map_object_from_fd (const char *name, const char *origname, int fd,
   /* Initialize to keep the compiler happy.  */
   const char *errstring = NULL;
   int errval = 0;
-  struct r_debug *r = _dl_debug_initialize (0, nsid);
+  struct r_debug *r = _dl_debug_update (nsid);
   bool make_consistent = false;
 
   /* Get file information.  To match the kernel behavior, do not fill
@@ -1025,6 +1025,10 @@ _dl_map_object_from_fd (const char *name, const char *origname, int fd,
 
       /* Refer to the real descriptor.  */
       l->l_real = &GL(dl_rtld_map);
+
+      /* Copy l_addr and l_ld to avoid a GDB warning with dlmopen().  */
+      l->l_addr = l->l_real->l_addr;
+      l->l_ld = l->l_real->l_ld;
 
       /* No need to bump the refcount of the real object, ld.so will
 	 never be unloaded.  */
@@ -1149,6 +1153,7 @@ _dl_map_object_from_fd (const char *name, const char *origname, int fd,
 		 such a segment to avoid a crash later.  */
 	      l->l_ld = (void *) ph->p_vaddr;
 	      l->l_ldnum = ph->p_memsz / sizeof (ElfW(Dyn));
+	      l->l_ld_readonly = (ph->p_flags & PF_W) == 0;
 	    }
 	  break;
 
@@ -1292,7 +1297,7 @@ _dl_map_object_from_fd (const char *name, const char *origname, int fd,
   else
     l->l_ld = (ElfW(Dyn) *) ((ElfW(Addr)) l->l_ld + l->l_addr);
 
-  elf_get_dynamic_info (l, NULL);
+  elf_get_dynamic_info (l);
 
   /* Make sure we are not dlopen'ing an object that has the
      DF_1_NOOPEN flag set, or a PIE object.  */

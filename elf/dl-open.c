@@ -66,6 +66,9 @@ struct dl_open_args
      libc_map value in the namespace in case of a dlopen failure.  */
   bool libc_already_loaded;
 
+  /* Set to true if the end of dl_open_worker_begin was reached.  */
+  bool worker_continue;
+
   /* Original parameters to the program and the current environment.  */
   int argc;
   char **argv;
@@ -482,7 +485,7 @@ call_dl_init (void *closure)
 }
 
 static void
-dl_open_worker (void *a)
+dl_open_worker_begin (void *a)
 {
   struct dl_open_args *args = a;
   const char *file = args->file;
@@ -574,7 +577,7 @@ dl_open_worker (void *a)
       if ((mode & RTLD_GLOBAL) && new->l_global == 0)
 	add_to_global_update (new);
 
-      assert (_dl_debug_initialize (0, args->nsid)->r_state == RT_CONSISTENT);
+      assert (_dl_debug_update (args->nsid)->r_state == RT_CONSISTENT);
 
       return;
     }
@@ -630,7 +633,7 @@ dl_open_worker (void *a)
 #endif
 
   /* Notify the debugger all new objects are now ready to go.  */
-  struct r_debug *r = _dl_debug_initialize (0, args->nsid);
+  struct r_debug *r = _dl_debug_update (args->nsid);
   r->r_state = RT_CONSISTENT;
   _dl_debug_state ();
   LIBC_PROBE (map_complete, 3, args->nsid, r, new);
@@ -769,17 +772,40 @@ dl_open_worker (void *a)
      namespace.  */
   if (!args->libc_already_loaded)
     {
+      /* dlopen cannot be used to load an initial libc by design.  */
       struct link_map *libc_map = GL(dl_ns)[args->nsid].libc_map;
-#ifdef SHARED
-      bool initial = libc_map->l_ns == LM_ID_BASE;
-#else
-      /* In the static case, there is only one namespace, but it
-	 contains a secondary libc (the primary libc is statically
-	 linked).  */
-      bool initial = false;
-#endif
-      _dl_call_libc_early_init (libc_map, initial);
+      _dl_call_libc_early_init (libc_map, false);
     }
+
+  args->worker_continue = true;
+}
+
+static void
+dl_open_worker (void *a)
+{
+  struct dl_open_args *args = a;
+
+  args->worker_continue = false;
+
+  {
+    /* Protects global and module specific TLS state.  */
+    __rtld_lock_lock_recursive (GL(dl_load_tls_lock));
+
+    struct dl_exception ex;
+    int err = _dl_catch_exception (&ex, dl_open_worker_begin, args);
+
+    __rtld_lock_unlock_recursive (GL(dl_load_tls_lock));
+
+    if (__glibc_unlikely (ex.errstring != NULL))
+      /* Reraise the error.  */
+      _dl_signal_exception (err, &ex, NULL);
+  }
+
+  if (!args->worker_continue)
+    return;
+
+  int mode = args->mode;
+  struct link_map *new = args->map;
 
   /* Run the initializer functions of new objects.  Temporarily
      disable the exception handler, so that lazy binding failures are
@@ -837,7 +863,7 @@ no more namespaces available for dlmopen()"));
 	  ++GL(dl_nns);
 	}
 
-      _dl_debug_initialize (0, nsid)->r_state = RT_CONSISTENT;
+      _dl_debug_update (nsid)->r_state = RT_CONSISTENT;
     }
   /* Never allow loading a DSO in a namespace which is empty.  Such
      direct placements is only causing problems.  Also don't allow
@@ -893,7 +919,7 @@ no more namespaces available for dlmopen()"));
       /* Avoid keeping around a dangling reference to the libc.so link
 	 map in case it has been cached in libc_map.  */
       if (!args.libc_already_loaded)
-	GL(dl_ns)[nsid].libc_map = NULL;
+	GL(dl_ns)[args.nsid].libc_map = NULL;
 
       /* Remove the object from memory.  It may be in an inconsistent
 	 state if relocation failed, for example.  */
@@ -906,7 +932,7 @@ no more namespaces available for dlmopen()"));
 	     the flag here.  */
 	}
 
-      assert (_dl_debug_initialize (0, args.nsid)->r_state == RT_CONSISTENT);
+      assert (_dl_debug_update (args.nsid)->r_state == RT_CONSISTENT);
 
       /* Release the lock.  */
       __rtld_lock_unlock_recursive (GL(dl_load_lock));
@@ -915,7 +941,7 @@ no more namespaces available for dlmopen()"));
       _dl_signal_exception (errcode, &exception, NULL);
     }
 
-  assert (_dl_debug_initialize (0, args.nsid)->r_state == RT_CONSISTENT);
+  assert (_dl_debug_update (args.nsid)->r_state == RT_CONSISTENT);
 
   /* Release the lock.  */
   __rtld_lock_unlock_recursive (GL(dl_load_lock));

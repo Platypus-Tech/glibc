@@ -342,6 +342,18 @@ outstring_converted_wide_string (FILE *s, const OTHER_CHAR_T *src, int prec,
   return done;
 }
 
+/* Calls __printf_fp or __printf_fphex based on the value of the
+   format specifier INFO->spec.  */
+static inline int
+__printf_fp_spec (FILE *fp, const struct printf_info *info,
+		  const void *const *args)
+{
+  if (info->spec == 'a' || info->spec == 'A')
+    return __printf_fphex (fp, info, args);
+  else
+    return __printf_fp (fp, info, args);
+}
+
 /* For handling long_double and longlong we use the same flag.  If
    `long' and `long long' are effectively the same type define it to
    zero.  */
@@ -638,8 +650,9 @@ static const uint8_t jump_table[] =
       REF (form_unknown)        /* for 'I' */				      \
     }
 
-
-#define process_arg(fspec)						      \
+/* Before invoking this macro, process_arg_int etc. macros have to be
+   defined to extract one argument of the appropriate type.  */
+#define process_arg()						              \
       /* Start real work.  We know about all flags and modifiers and	      \
 	 now process the wanted format specifier.  */			      \
     LABEL (form_percent):						      \
@@ -653,13 +666,7 @@ static const uint8_t jump_table[] =
 									      \
       if (is_longlong)							      \
 	{								      \
-	  long long int signed_number;					      \
-									      \
-	  if (fspec == NULL)						      \
-	    signed_number = va_arg (ap, long long int);			      \
-	  else								      \
-	    signed_number = args_value[fspec->data_arg].pa_long_long_int;     \
-									      \
+	  long long int signed_number = process_arg_long_long_int ();	      \
 	  is_negative = signed_number < 0;				      \
 	  number.longlong = is_negative ? (- signed_number) : signed_number;  \
 									      \
@@ -668,29 +675,14 @@ static const uint8_t jump_table[] =
       else								      \
 	{								      \
 	  long int signed_number;					      \
-									      \
-	  if (fspec == NULL)						      \
-	    {								      \
-	      if (is_long_num)						      \
-		signed_number = va_arg (ap, long int);			      \
-	      else if (is_char)						      \
-		signed_number = (signed char) va_arg (ap, unsigned int);      \
-	      else if (!is_short)					      \
-		signed_number = va_arg (ap, int);			      \
-	      else							      \
-		signed_number = (short int) va_arg (ap, unsigned int);	      \
-	    }								      \
+	  if (is_long_num)						      \
+	    signed_number = process_arg_long_int ();			      \
+	  else if (is_char)						      \
+	    signed_number = (signed char) process_arg_unsigned_int ();	      \
+	  else if (!is_short)						      \
+	    signed_number = process_arg_int ();				      \
 	  else								      \
-	    if (is_long_num)						      \
-	      signed_number = args_value[fspec->data_arg].pa_long_int;	      \
-	    else if (is_char)						      \
-	      signed_number = (signed char)				      \
-		args_value[fspec->data_arg].pa_u_int;			      \
-	    else if (!is_short)						      \
-	      signed_number = args_value[fspec->data_arg].pa_int;	      \
-	    else							      \
-	      signed_number = (short int)				      \
-		args_value[fspec->data_arg].pa_u_int;			      \
+	    signed_number = (short int) process_arg_unsigned_int ();	      \
 									      \
 	  is_negative = signed_number < 0;				      \
 	  number.word = is_negative ? (- signed_number) : signed_number;      \
@@ -725,10 +717,7 @@ static const uint8_t jump_table[] =
 									      \
       if (is_longlong)							      \
 	{								      \
-	  if (fspec == NULL)						      \
-	    number.longlong = va_arg (ap, unsigned long long int);	      \
-	  else								      \
-	    number.longlong = args_value[fspec->data_arg].pa_u_long_long_int; \
+	  number.longlong = process_arg_unsigned_long_long_int ();	      \
 									      \
 	LABEL (longlong_number):					      \
 	  if (prec < 0)							      \
@@ -764,28 +753,14 @@ static const uint8_t jump_table[] =
 	}								      \
       else								      \
 	{								      \
-	  if (fspec == NULL)						      \
-	    {								      \
-	      if (is_long_num)						      \
-		number.word = va_arg (ap, unsigned long int);		      \
-	      else if (is_char)						      \
-		number.word = (unsigned char) va_arg (ap, unsigned int);      \
-	      else if (!is_short)					      \
-		number.word = va_arg (ap, unsigned int);		      \
-	      else							      \
-		number.word = (unsigned short int) va_arg (ap, unsigned int); \
-	    }								      \
+	  if (is_long_num)						      \
+	    number.word = process_arg_unsigned_long_int ();		      \
+	  else if (is_char)						      \
+	    number.word = (unsigned char) process_arg_unsigned_int ();	      \
+	  else if (!is_short)						      \
+	    number.word = process_arg_unsigned_int ();			      \
 	  else								      \
-	    if (is_long_num)						      \
-	      number.word = args_value[fspec->data_arg].pa_u_long_int;	      \
-	    else if (is_char)						      \
-	      number.word = (unsigned char)				      \
-		args_value[fspec->data_arg].pa_u_int;			      \
-	    else if (!is_short)						      \
-	      number.word = args_value[fspec->data_arg].pa_u_int;	      \
-	    else							      \
-	      number.word = (unsigned short int)			      \
-		args_value[fspec->data_arg].pa_u_int;			      \
+	    number.word = (unsigned short int) process_arg_unsigned_int ();   \
 									      \
 	LABEL (number):							      \
 	  if (prec < 0)							      \
@@ -902,124 +877,10 @@ static const uint8_t jump_table[] =
 	  break;							      \
 	}								      \
 									      \
-    LABEL (form_float):							      \
-      {									      \
-	/* Floating-point number.  This is handled by printf_fp.c.  */	      \
-	const void *ptr;						      \
-	int function_done;						      \
-									      \
-	if (fspec == NULL)						      \
-	  {								      \
-	    if (__glibc_unlikely ((mode_flags & PRINTF_LDBL_IS_DBL) != 0))    \
-	      is_long_double = 0;					      \
-									      \
-	    struct printf_info info = { .prec = prec,			      \
-					.width = width,			      \
-					.spec = spec,			      \
-					.is_long_double = is_long_double,     \
-					.is_short = is_short,		      \
-					.is_long = is_long,		      \
-					.alt = alt,			      \
-					.space = space,			      \
-					.left = left,			      \
-					.showsign = showsign,		      \
-					.group = group,			      \
-					.pad = pad,			      \
-					.extra = 0,			      \
-					.i18n = use_outdigits,		      \
-					.wide = sizeof (CHAR_T) != 1,	      \
-					.is_binary128 = 0};		      \
-									      \
-	    PARSE_FLOAT_VA_ARG_EXTENDED (info);				      \
-	    ptr = (const void *) &the_arg;				      \
-									      \
-	    function_done = __printf_fp (s, &info, &ptr);		      \
-	  }								      \
-	else								      \
-	  {								      \
-	    ptr = (const void *) &args_value[fspec->data_arg];		      \
-	    if (__glibc_unlikely ((mode_flags & PRINTF_LDBL_IS_DBL) != 0))    \
-	      {								      \
-		fspec->data_arg_type = PA_DOUBLE;			      \
-		fspec->info.is_long_double = 0;				      \
-	      }								      \
-	    SETUP_FLOAT128_INFO (fspec->info);				      \
-									      \
-	    function_done = __printf_fp (s, &fspec->info, &ptr);	      \
-	  }								      \
-									      \
-	if (function_done < 0)						      \
-	  {								      \
-	    /* Error in print handler; up to handler to set errno.  */	      \
-	    done = -1;							      \
-	    goto all_done;						      \
-	  }								      \
-									      \
-	done_add (function_done);					      \
-      }									      \
-      break;								      \
-									      \
-    LABEL (form_floathex):						      \
-      {									      \
-	/* Floating point number printed as hexadecimal number.  */	      \
-	const void *ptr;						      \
-	int function_done;						      \
-									      \
-	if (fspec == NULL)						      \
-	  {								      \
-	    if (__glibc_unlikely ((mode_flags & PRINTF_LDBL_IS_DBL) != 0))    \
-	      is_long_double = 0;					      \
-									      \
-	    struct printf_info info = { .prec = prec,			      \
-					.width = width,			      \
-					.spec = spec,			      \
-					.is_long_double = is_long_double,     \
-					.is_short = is_short,		      \
-					.is_long = is_long,		      \
-					.alt = alt,			      \
-					.space = space,			      \
-					.left = left,			      \
-					.showsign = showsign,		      \
-					.group = group,			      \
-					.pad = pad,			      \
-					.extra = 0,			      \
-					.wide = sizeof (CHAR_T) != 1,	      \
-					.is_binary128 = 0};		      \
-									      \
-	    PARSE_FLOAT_VA_ARG_EXTENDED (info);				      \
-	    ptr = (const void *) &the_arg;				      \
-									      \
-	    function_done = __printf_fphex (s, &info, &ptr);		      \
-	  }								      \
-	else								      \
-	  {								      \
-	    ptr = (const void *) &args_value[fspec->data_arg];		      \
-	    if (__glibc_unlikely ((mode_flags & PRINTF_LDBL_IS_DBL) != 0))    \
-	      fspec->info.is_long_double = 0;				      \
-	    SETUP_FLOAT128_INFO (fspec->info);				      \
-									      \
-	    function_done = __printf_fphex (s, &fspec->info, &ptr);	      \
-	  }								      \
-									      \
-	if (function_done < 0)						      \
-	  {								      \
-	    /* Error in print handler; up to handler to set errno.  */	      \
-	    done = -1;							      \
-	    goto all_done;						      \
-	  }								      \
-									      \
-	done_add (function_done);					      \
-      }									      \
-      break;								      \
-									      \
     LABEL (form_pointer):						      \
       /* Generic pointer.  */						      \
       {									      \
-	const void *ptr;						      \
-	if (fspec == NULL)						      \
-	  ptr = va_arg (ap, void *);					      \
-	else								      \
-	  ptr = args_value[fspec->data_arg].pa_pointer;			      \
+	const void *ptr = process_arg_pointer ();			      \
 	if (ptr != NULL)						      \
 	  {								      \
 	    /* If the pointer is not NULL, write it as a %#x spec.  */	      \
@@ -1060,30 +921,17 @@ static const uint8_t jump_table[] =
 	    __libc_fatal ("*** %n in writable segment detected ***\n");	      \
 	}								      \
       /* Answer the count of characters written.  */			      \
-      if (fspec == NULL)						      \
-	{								      \
-	  if (is_longlong)						      \
-	    *(long long int *) va_arg (ap, void *) = done;		      \
-	  else if (is_long_num)						      \
-	    *(long int *) va_arg (ap, void *) = done;			      \
-	  else if (is_char)						      \
-	    *(char *) va_arg (ap, void *) = done;			      \
-	  else if (!is_short)						      \
-	    *(int *) va_arg (ap, void *) = done;			      \
-	  else								      \
-	    *(short int *) va_arg (ap, void *) = done;			      \
-	}								      \
+      void *ptrptr = process_arg_pointer ();				      \
+      if (is_longlong)							      \
+	*(long long int *) ptrptr = done;				      \
+      else if (is_long_num)						      \
+	*(long int *) ptrptr = done;					      \
+      else if (is_char)							      \
+	*(char *) ptrptr = done;					      \
+      else if (!is_short)						      \
+	*(int *) ptrptr = done;						      \
       else								      \
-	if (is_longlong)						      \
-	  *(long long int *) args_value[fspec->data_arg].pa_pointer = done;   \
-	else if (is_long_num)						      \
-	  *(long int *) args_value[fspec->data_arg].pa_pointer = done;	      \
-	else if (is_char)						      \
-	  *(char *) args_value[fspec->data_arg].pa_pointer = done;	      \
-	else if (!is_short)						      \
-	  *(int *) args_value[fspec->data_arg].pa_pointer = done;	      \
-	else								      \
-	  *(short int *) args_value[fspec->data_arg].pa_pointer = done;	      \
+	*(short int *) ptrptr = done;					      \
       break;								      \
 									      \
     LABEL (form_strerror):						      \
@@ -1095,7 +943,7 @@ static const uint8_t jump_table[] =
       goto LABEL (print_string)
 
 #ifdef COMPILE_WPRINTF
-# define process_string_arg(fspec) \
+# define process_string_arg()						      \
     LABEL (form_character):						      \
       /* Character.  */							      \
       if (is_long)							      \
@@ -1103,11 +951,7 @@ static const uint8_t jump_table[] =
       --width;	/* Account for the character itself.  */		      \
       if (!left)							      \
 	PAD (L' ');							      \
-      if (fspec == NULL)						      \
-	outchar (__btowc ((unsigned char) va_arg (ap, int))); /* Promoted. */ \
-      else								      \
-	outchar (__btowc ((unsigned char)				      \
-			  args_value[fspec->data_arg].pa_int));		      \
+      outchar (__btowc ((unsigned char) process_arg_int ())); /* Promoted. */ \
       if (left)								      \
 	PAD (L' ');							      \
       break;								      \
@@ -1118,10 +962,7 @@ static const uint8_t jump_table[] =
 	--width;							      \
 	if (!left)							      \
 	  PAD (L' ');							      \
-	if (fspec == NULL)						      \
-	  outchar (va_arg (ap, wchar_t));				      \
-	else								      \
-	  outchar (args_value[fspec->data_arg].pa_wchar);		      \
+	outchar (process_arg_wchar_t ());				      \
 	if (left)							      \
 	  PAD (L' ');							      \
       }									      \
@@ -1133,10 +974,7 @@ static const uint8_t jump_table[] =
 									      \
 	/* The string argument could in fact be `char *' or `wchar_t *'.      \
 	   But this should not make a difference here.  */		      \
-	if (fspec == NULL)						      \
-	  string = (CHAR_T *) va_arg (ap, const wchar_t *);		      \
-	else								      \
-	  string = (CHAR_T *) args_value[fspec->data_arg].pa_wstring;	      \
+	string = (CHAR_T *) process_arg_wstring ();			      \
 									      \
 	/* Entry point for printing other strings.  */			      \
       LABEL (print_string):						      \
@@ -1188,7 +1026,7 @@ static const uint8_t jump_table[] =
       }									      \
       break;
 #else
-# define process_string_arg(fspec) \
+# define process_string_arg()						      \
     LABEL (form_character):						      \
       /* Character.  */							      \
       if (is_long)							      \
@@ -1196,10 +1034,7 @@ static const uint8_t jump_table[] =
       --width;	/* Account for the character itself.  */		      \
       if (!left)							      \
 	PAD (' ');							      \
-      if (fspec == NULL)						      \
-	outchar ((unsigned char) va_arg (ap, int)); /* Promoted.  */	      \
-      else								      \
-	outchar ((unsigned char) args_value[fspec->data_arg].pa_int);	      \
+      outchar ((unsigned char) process_arg_int ()); /* Promoted.  */	      \
       if (left)								      \
 	PAD (' ');							      \
       break;								      \
@@ -1212,9 +1047,7 @@ static const uint8_t jump_table[] =
 	size_t len;							      \
 									      \
 	memset (&mbstate, '\0', sizeof (mbstate_t));			      \
-	len = __wcrtomb (buf, (fspec == NULL ? va_arg (ap, wchar_t)	      \
-			       : args_value[fspec->data_arg].pa_wchar),	      \
-			 &mbstate);					      \
+	len = __wcrtomb (buf, process_arg_wchar_t (), &mbstate);	      \
 	if (len == (size_t) -1)						      \
 	  {								      \
 	    /* Something went wrong during the conversion.  Bail out.  */     \
@@ -1236,10 +1069,7 @@ static const uint8_t jump_table[] =
 									      \
 	/* The string argument could in fact be `char *' or `wchar_t *'.      \
 	   But this should not make a difference here.  */		      \
-	if (fspec == NULL)						      \
-	  string = (char *) va_arg (ap, const char *);			      \
-	else								      \
-	  string = (char *) args_value[fspec->data_arg].pa_string;	      \
+	string = (char *) process_arg_string ();			      \
 									      \
 	/* Entry point for printing other strings.  */			      \
       LABEL (print_string):						      \
@@ -1420,7 +1250,6 @@ vfprintf (FILE *s, const CHAR_T *format, va_list ap, unsigned int mode_flags)
       STEP0_3_TABLE;
       STEP4_TABLE;
 
-      union printf_arg *args_value;	/* This is not used here but ... */
       int is_negative;	/* Flag for negative number.  */
       union
       {
@@ -1435,7 +1264,9 @@ vfprintf (FILE *s, const CHAR_T *format, va_list ap, unsigned int mode_flags)
       int left = 0;	/* Left-justify output.  */
       int showsign = 0;	/* Always begin with plus or minus sign.  */
       int group = 0;	/* Print numbers according grouping rules.  */
-      int is_long_double = 0; /* Argument is long double/ long long int.  */
+      /* Argument is long double/long long int.  Only used if
+	 double/long double or long int/long long int are distinct.  */
+      int is_long_double __attribute__ ((unused)) = 0;
       int is_short = 0;	/* Argument is short int.  */
       int is_long = 0;	/* Argument is long int.  */
       int is_char = 0;	/* Argument is promoted (unsigned) char.  */
@@ -1643,8 +1474,67 @@ vfprintf (FILE *s, const CHAR_T *format, va_list ap, unsigned int mode_flags)
       /* Process current format.  */
       while (1)
 	{
-	  process_arg (((struct printf_spec *) NULL));
-	  process_string_arg (((struct printf_spec *) NULL));
+#define process_arg_int() va_arg (ap, int)
+#define process_arg_long_int() va_arg (ap, long int)
+#define process_arg_long_long_int() va_arg (ap, long long int)
+#define process_arg_pointer() va_arg (ap, void *)
+#define process_arg_string() va_arg (ap, const char *)
+#define process_arg_unsigned_int() va_arg (ap, unsigned int)
+#define process_arg_unsigned_long_int() va_arg (ap, unsigned long int)
+#define process_arg_unsigned_long_long_int() va_arg (ap, unsigned long long int)
+#define process_arg_wchar_t() va_arg (ap, wchar_t)
+#define process_arg_wstring() va_arg (ap, const wchar_t *)
+	  process_arg ();
+	  process_string_arg ();
+#undef process_arg_int
+#undef process_arg_long_int
+#undef process_arg_long_long_int
+#undef process_arg_pointer
+#undef process_arg_string
+#undef process_arg_unsigned_int
+#undef process_arg_unsigned_long_int
+#undef process_arg_unsigned_long_long_int
+#undef process_arg_wchar_t
+#undef process_arg_wstring
+
+	LABEL (form_float):
+	LABEL (form_floathex):
+	  {
+	    if (__glibc_unlikely ((mode_flags & PRINTF_LDBL_IS_DBL) != 0))
+	      is_long_double = 0;
+
+	    struct printf_info info =
+	      {
+		.prec = prec,
+		.width = width,
+		.spec = spec,
+		.is_long_double = is_long_double,
+		.is_short = is_short,
+		.is_long = is_long,
+		.alt = alt,
+		.space = space,
+		.left = left,
+		.showsign = showsign,
+		.group = group,
+		.pad = pad,
+		.extra = 0,
+		.i18n = use_outdigits,
+		.wide = sizeof (CHAR_T) != 1,
+		.is_binary128 = 0
+	      };
+
+	    PARSE_FLOAT_VA_ARG_EXTENDED (info);
+	    const void *ptr = &the_arg;
+
+	    int function_done = __printf_fp_spec (s, &info, &ptr);
+	    if (function_done < 0)
+	      {
+		done = -1;
+		goto all_done;
+	      }
+	    done_add (function_done);
+	  }
+	  break;
 
 	LABEL (form_unknown):
 	  if (spec == L_('\0'))
@@ -1901,7 +1791,6 @@ printf_positional (FILE *s, const CHAR_T *format, int readonly_format,
 	unsigned long int word;
       } number;
       int base;
-      union printf_arg the_arg;
       CHAR_T *string;		/* Pointer to argument string.  */
 
       /* Fill variables from values in struct.  */
@@ -1910,7 +1799,8 @@ printf_positional (FILE *s, const CHAR_T *format, int readonly_format,
       int left = specs[nspecs_done].info.left;
       int showsign = specs[nspecs_done].info.showsign;
       int group = specs[nspecs_done].info.group;
-      int is_long_double = specs[nspecs_done].info.is_long_double;
+      int is_long_double __attribute__ ((unused))
+	= specs[nspecs_done].info.is_long_double;
       int is_short = specs[nspecs_done].info.is_short;
       int is_char = specs[nspecs_done].info.is_char;
       int is_long = specs[nspecs_done].info.is_long;
@@ -1993,8 +1883,54 @@ printf_positional (FILE *s, const CHAR_T *format, int readonly_format,
 
 	  JUMP (spec, step4_jumps);
 
-	  process_arg ((&specs[nspecs_done]));
-	  process_string_arg ((&specs[nspecs_done]));
+#define process_arg_data args_value[specs[nspecs_done].data_arg]
+#define process_arg_int() process_arg_data.pa_int
+#define process_arg_long_int() process_arg_data.pa_long_int
+#define process_arg_long_long_int() process_arg_data.pa_long_long_int
+#define process_arg_pointer() process_arg_data.pa_pointer
+#define process_arg_string() process_arg_data.pa_string
+#define process_arg_unsigned_int() process_arg_data.pa_u_int
+#define process_arg_unsigned_long_int() process_arg_data.pa_u_long_int
+#define process_arg_unsigned_long_long_int() process_arg_data.pa_u_long_long_int
+#define process_arg_wchar_t() process_arg_data.pa_wchar
+#define process_arg_wstring() process_arg_data.pa_wstring
+	  process_arg ();
+	  process_string_arg ();
+#undef process_arg_data
+#undef process_arg_int
+#undef process_arg_long_int
+#undef process_arg_long_long_int
+#undef process_arg_pointer
+#undef process_arg_string
+#undef process_arg_unsigned_int
+#undef process_arg_unsigned_long_int
+#undef process_arg_unsigned_long_long_int
+#undef process_arg_wchar_t
+#undef process_arg_wstring
+
+	  LABEL (form_float):
+	  LABEL (form_floathex):
+	  {
+	    const void *ptr
+	      = (const void *) &args_value[specs[nspecs_done].data_arg];
+	    if (__glibc_unlikely ((mode_flags & PRINTF_LDBL_IS_DBL) != 0))
+	      {
+		specs[nspecs_done].data_arg_type = PA_DOUBLE;
+		specs[nspecs_done].info.is_long_double = 0;
+	      }
+	    SETUP_FLOAT128_INFO (specs[nspecs_done].info);
+
+	    int function_done
+	      = __printf_fp_spec (s, &specs[nspecs_done].info, &ptr);
+	    if (function_done < 0)
+	      {
+		/* Error in print handler; up to handler to set errno.  */
+		done = -1;
+		goto all_done;
+	      }
+	    done_add (function_done);
+	  }
+	  break;
 
 	  LABEL (form_unknown):
 	  {

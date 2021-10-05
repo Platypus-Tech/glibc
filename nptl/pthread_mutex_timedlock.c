@@ -1,6 +1,5 @@
 /* Copyright (C) 2002-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
-   Contributed by Ulrich Drepper <drepper@redhat.com>, 2002.
 
    The GNU C Library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -300,13 +299,6 @@ __pthread_mutex_clocklock_common (pthread_mutex_t *mutex,
     case PTHREAD_MUTEX_PI_ROBUST_NORMAL_NP:
     case PTHREAD_MUTEX_PI_ROBUST_ADAPTIVE_NP:
       {
-	/* Currently futex FUTEX_LOCK_PI operation only provides support for
-	   CLOCK_REALTIME and trying to emulate by converting a
-	   CLOCK_MONOTONIC to CLOCK_REALTIME will take in account possible
-	   changes to the wall clock.  */
-	if (__glibc_unlikely (clockid != CLOCK_REALTIME))
-	  return EINVAL;
-
 	int kind, robust;
 	{
 	  /* See concurrency notes regarding __kind in struct __pthread_mutex_s
@@ -370,7 +362,8 @@ __pthread_mutex_clocklock_common (pthread_mutex_t *mutex,
 	    int private = (robust
 			   ? PTHREAD_ROBUST_MUTEX_PSHARED (mutex)
 			   : PTHREAD_MUTEX_PSHARED (mutex));
-	    int e = futex_lock_pi64 (&mutex->__data.__lock, abstime, private);
+	    int e = __futex_lock_pi64 (&mutex->__data.__lock, clockid, abstime,
+				       private);
 	    if (e == ETIMEDOUT)
 	      return ETIMEDOUT;
 	    else if (e == ESRCH || e == EDEADLK)

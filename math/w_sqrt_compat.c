@@ -1,6 +1,5 @@
 /* Copyright (C) 2011-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
-   Contributed by Ulrich Drepper <drepper@gmail.com>, 2011.
 
    The GNU C Library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -17,9 +16,14 @@
    <https://www.gnu.org/licenses/>.  */
 
 #define NO_MATH_REDIRECT
+#define dsqrtl __hide_dsqrtl
+#define f32xsqrtf64 __hide_f32xsqrtf64
 #include <math.h>
+#undef dsqrtl
+#undef f32xsqrtf64
 #include <math_private.h>
 #include <math-svid-compat.h>
+#include <math-narrow-alias.h>
 #include <libm-alias-double.h>
 
 
@@ -34,4 +38,5 @@ __sqrt (double x)
   return __ieee754_sqrt (x);
 }
 libm_alias_double (__sqrt, sqrt)
+libm_alias_double_narrow (__sqrt, sqrt)
 #endif

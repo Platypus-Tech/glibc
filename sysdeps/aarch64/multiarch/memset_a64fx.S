@@ -27,14 +27,10 @@
  */
 
 #define L1_SIZE		(64*1024)	// L1 64KB
-#define L2_SIZE         (8*1024*1024)	// L2 8MB - 1MB
+#define L2_SIZE         (8*1024*1024)	// L2 8MB
 #define CACHE_LINE_SIZE	256
 #define PF_DIST_L1	(CACHE_LINE_SIZE * 16)	// Prefetch distance L1
-#define ZF_DIST		(CACHE_LINE_SIZE * 21)	// Zerofill distance
-#define rest		x8
 #define vector_length	x9
-#define vl_remainder	x10	// vector_length remainder
-#define cl_remainder	x11	// CACHE_LINE_SIZE remainder
 
 #if HAVE_AARCH64_SVE_ASM
 # if IS_IN (libc)
@@ -42,224 +38,133 @@
 
 	.arch armv8.2-a+sve
 
-	.macro dc_zva times
-	dc	zva, tmp1
-	add	tmp1, tmp1, CACHE_LINE_SIZE
-	.if \times-1
-	dc_zva "(\times-1)"
-	.endif
-	.endm
-
 	.macro st1b_unroll first=0, last=7
-	st1b	z0.b, p0, [dst, #\first, mul vl]
+	st1b	z0.b, p0, [dst, \first, mul vl]
 	.if \last-\first
 	st1b_unroll "(\first+1)", \last
 	.endif
 	.endm
 
-	.macro shortcut_for_small_size exit
-	// if rest <= vector_length * 2
-	whilelo	p0.b, xzr, count
-	whilelo	p1.b, vector_length, count
-	b.last	1f
-	st1b	z0.b, p0, [dstin, #0, mul vl]
-	st1b	z0.b, p1, [dstin, #1, mul vl]
-	ret
-1:	// if rest > vector_length * 8
-	cmp	count, vector_length, lsl 3	// vector_length * 8
-	b.hi	\exit
-	// if rest <= vector_length * 4
-	lsl	tmp1, vector_length, 1	// vector_length * 2
-	whilelo	p2.b, tmp1, count
-	incb	tmp1
-	whilelo	p3.b, tmp1, count
-	b.last	1f
-	st1b	z0.b, p0, [dstin, #0, mul vl]
-	st1b	z0.b, p1, [dstin, #1, mul vl]
-	st1b	z0.b, p2, [dstin, #2, mul vl]
-	st1b	z0.b, p3, [dstin, #3, mul vl]
-	ret
-1:	// if rest <= vector_length * 8
-	lsl	tmp1, vector_length, 2	// vector_length * 4
-	whilelo	p4.b, tmp1, count
-	incb	tmp1
-	whilelo	p5.b, tmp1, count
-	b.last	1f
-	st1b	z0.b, p0, [dstin, #0, mul vl]
-	st1b	z0.b, p1, [dstin, #1, mul vl]
-	st1b	z0.b, p2, [dstin, #2, mul vl]
-	st1b	z0.b, p3, [dstin, #3, mul vl]
-	st1b	z0.b, p4, [dstin, #4, mul vl]
-	st1b	z0.b, p5, [dstin, #5, mul vl]
-	ret
-1:	lsl	tmp1, vector_length, 2	// vector_length * 4
-	incb	tmp1			// vector_length * 5
-	incb	tmp1			// vector_length * 6
-	whilelo	p6.b, tmp1, count
-	incb	tmp1
-	whilelo	p7.b, tmp1, count
-	st1b	z0.b, p0, [dstin, #0, mul vl]
-	st1b	z0.b, p1, [dstin, #1, mul vl]
-	st1b	z0.b, p2, [dstin, #2, mul vl]
-	st1b	z0.b, p3, [dstin, #3, mul vl]
-	st1b	z0.b, p4, [dstin, #4, mul vl]
-	st1b	z0.b, p5, [dstin, #5, mul vl]
-	st1b	z0.b, p6, [dstin, #6, mul vl]
-	st1b	z0.b, p7, [dstin, #7, mul vl]
-	ret
-	.endm
+
+#undef BTI_C
+#define BTI_C
 
 ENTRY (MEMSET)
-
 	PTR_ARG (0)
 	SIZE_ARG (2)
 
-	cbnz	count, 1f
-	ret
-1:	dup	z0.b, valw
 	cntb	vector_length
-	// shortcut for less than vector_length * 8
-	// gives a free ptrue to p0.b for n >= vector_length
-	shortcut_for_small_size L(vl_agnostic)
-	// end of shortcut
+	dup	z0.b, valw
+	whilelo	p0.b, vector_length, count
+	b.last	1f
+	whilelo	p1.b, xzr, count
+	st1b	z0.b, p1, [dstin, 0, mul vl]
+	st1b	z0.b, p0, [dstin, 1, mul vl]
+	ret
 
-L(vl_agnostic): // VL Agnostic
-	mov	rest, count
-	mov	dst, dstin
+	// count >= vector_length * 2
+1:	cmp	count, vector_length, lsl 2
 	add	dstend, dstin, count
-	// if rest >= L2_SIZE && vector_length == 64 then L(L2)
-	mov	tmp1, 64
-	cmp	rest, L2_SIZE
-	ccmp	vector_length, tmp1, 0, cs
-	b.eq	L(L2)
-	// if rest >= L1_SIZE && vector_length == 64 then L(L1_prefetch)
-	cmp	rest, L1_SIZE
-	ccmp	vector_length, tmp1, 0, cs
-	b.eq	L(L1_prefetch)
+	b.hi	1f
+	st1b	z0.b, p0, [dstin, 0, mul vl]
+	st1b	z0.b, p0, [dstin, 1, mul vl]
+	st1b	z0.b, p0, [dstend, -2, mul vl]
+	st1b	z0.b, p0, [dstend, -1, mul vl]
+	ret
 
-L(unroll32):
-	lsl	tmp1, vector_length, 3	// vector_length * 8
-	lsl	tmp2, vector_length, 5	// vector_length * 32
-	.p2align 3
-1:	cmp	rest, tmp2
-	b.cc	L(unroll8)
-	st1b_unroll
-	add	dst, dst, tmp1
-	st1b_unroll
-	add	dst, dst, tmp1
-	st1b_unroll
-	add	dst, dst, tmp1
-	st1b_unroll
-	add	dst, dst, tmp1
-	sub	rest, rest, tmp2
-	b	1b
+	// count > vector_length * 4
+1:	lsl	tmp1, vector_length, 3
+	cmp	count, tmp1
+	b.hi	L(vl_agnostic)
+	st1b	z0.b, p0, [dstin, 0, mul vl]
+	st1b	z0.b, p0, [dstin, 1, mul vl]
+	st1b	z0.b, p0, [dstin, 2, mul vl]
+	st1b	z0.b, p0, [dstin, 3, mul vl]
+	st1b	z0.b, p0, [dstend, -4, mul vl]
+	st1b	z0.b, p0, [dstend, -3, mul vl]
+	st1b	z0.b, p0, [dstend, -2, mul vl]
+	st1b	z0.b, p0, [dstend, -1, mul vl]
+	ret
 
+	.p2align 4
+L(vl_agnostic): // VL Agnostic
+	mov	dst, dstin
+	cmp	count, L1_SIZE
+	b.hi	L(L1_prefetch)
+
+	// count >= 8 * vector_length
 L(unroll8):
-	lsl	tmp1, vector_length, 3
-	.p2align 3
-1:	cmp	rest, tmp1
-	b.cc	L(last)
-	st1b_unroll
+	sub	count, count, tmp1
+	.p2align 4
+	// The 2 instructions at the beginning of the following loop,
+	// cmp and branch, are a workaround so as not to degrade at
+	// the peak performance 16KB.
+	// It is found heuristically and the branch condition, b.ne,
+	// is chosen intentionally never to jump.
+1:	cmp	xzr, xzr
+	b.ne	1b
+	st1b_unroll 0, 7
 	add	dst, dst, tmp1
-	sub	rest, rest, tmp1
-	b	1b
+	subs	count, count, tmp1
+	b.hi	1b
+	add	count, count, tmp1
 
 L(last):
-	whilelo	p0.b, xzr, rest
-	whilelo	p1.b, vector_length, rest
-	b.last	1f
-	st1b	z0.b, p0, [dst, #0, mul vl]
-	st1b	z0.b, p1, [dst, #1, mul vl]
-	ret
-1:	lsl	tmp1, vector_length, 1	// vector_length * 2
-	whilelo	p2.b, tmp1, rest
-	incb	tmp1
-	whilelo	p3.b, tmp1, rest
-	b.last	1f
-	st1b	z0.b, p0, [dst, #0, mul vl]
-	st1b	z0.b, p1, [dst, #1, mul vl]
-	st1b	z0.b, p2, [dst, #2, mul vl]
-	st1b	z0.b, p3, [dst, #3, mul vl]
-	ret
-1:	lsl	tmp1, vector_length, 2	// vector_length * 4
-	whilelo	p4.b, tmp1, rest
-	incb	tmp1
-	whilelo	p5.b, tmp1, rest
-	incb	tmp1
-	whilelo	p6.b, tmp1, rest
-	incb	tmp1
-	whilelo	p7.b, tmp1, rest
-	st1b	z0.b, p0, [dst, #0, mul vl]
-	st1b	z0.b, p1, [dst, #1, mul vl]
-	st1b	z0.b, p2, [dst, #2, mul vl]
-	st1b	z0.b, p3, [dst, #3, mul vl]
-	st1b	z0.b, p4, [dst, #4, mul vl]
-	st1b	z0.b, p5, [dst, #5, mul vl]
-	st1b	z0.b, p6, [dst, #6, mul vl]
-	st1b	z0.b, p7, [dst, #7, mul vl]
+	cmp	count, vector_length, lsl 1
+	b.ls	2f
+	add	tmp2, vector_length, vector_length, lsl 2
+	cmp	count, tmp2
+	b.ls	5f
+	st1b	z0.b, p0, [dstend, -8, mul vl]
+	st1b	z0.b, p0, [dstend, -7, mul vl]
+	st1b	z0.b, p0, [dstend, -6, mul vl]
+5:	st1b	z0.b, p0, [dstend, -5, mul vl]
+	st1b	z0.b, p0, [dstend, -4, mul vl]
+	st1b	z0.b, p0, [dstend, -3, mul vl]
+2:	st1b	z0.b, p0, [dstend, -2, mul vl]
+	st1b	z0.b, p0, [dstend, -1, mul vl]
 	ret
 
-L(L1_prefetch): // if rest >= L1_SIZE
+	// count >= L1_SIZE
 	.p2align 3
+L(L1_prefetch):
+	cmp	count, L2_SIZE
+	b.hs	L(L2)
+	cmp	vector_length, 64
+	b.ne	L(unroll8)
 1:	st1b_unroll 0, 3
 	prfm	pstl1keep, [dst, PF_DIST_L1]
 	st1b_unroll 4, 7
 	prfm	pstl1keep, [dst, PF_DIST_L1 + CACHE_LINE_SIZE]
 	add	dst, dst, CACHE_LINE_SIZE * 2
-	sub	rest, rest, CACHE_LINE_SIZE * 2
-	cmp	rest, L1_SIZE
-	b.ge	1b
-	cbnz	rest, L(unroll32)
-	ret
+	sub	count, count, CACHE_LINE_SIZE * 2
+	cmp	count, PF_DIST_L1
+	b.hs	1b
+	b	L(unroll8)
 
-L(L2):
-	// align dst address at vector_length byte boundary
-	sub	tmp1, vector_length, 1
-	ands	tmp2, dst, tmp1
-	// if vl_remainder == 0
-	b.eq	1f
-	sub	vl_remainder, vector_length, tmp2
-	// process remainder until the first vector_length boundary
-	whilelt	p2.b, xzr, vl_remainder
-	st1b	z0.b, p2, [dst]
-	add	dst, dst, vl_remainder
-	sub	rest, rest, vl_remainder
-	// align dstin address at CACHE_LINE_SIZE byte boundary
-1:	mov	tmp1, CACHE_LINE_SIZE
-	ands	tmp2, dst, CACHE_LINE_SIZE - 1
-	// if cl_remainder == 0
-	b.eq	L(L2_dc_zva)
-	sub	cl_remainder, tmp1, tmp2
-	// process remainder until the first CACHE_LINE_SIZE boundary
-	mov	tmp1, xzr       // index
-2:	whilelt	p2.b, tmp1, cl_remainder
-	st1b	z0.b, p2, [dst, tmp1]
-	incb	tmp1
-	cmp	tmp1, cl_remainder
-	b.lo	2b
-	add	dst, dst, cl_remainder
-	sub	rest, rest, cl_remainder
-
-L(L2_dc_zva):
-	// zero fill
-	mov	tmp1, dst
-	dc_zva	(ZF_DIST / CACHE_LINE_SIZE) - 1
-	mov	zva_len, ZF_DIST
-	add	tmp1, zva_len, CACHE_LINE_SIZE * 2
-	// unroll
+	// count >= L2_SIZE
 	.p2align 3
-1:	st1b_unroll 0, 3
-	add	tmp2, dst, zva_len
-	dc	 zva, tmp2
-	st1b_unroll 4, 7
-	add	tmp2, tmp2, CACHE_LINE_SIZE
-	dc	zva, tmp2
-	add	dst, dst, CACHE_LINE_SIZE * 2
-	sub	rest, rest, CACHE_LINE_SIZE * 2
-	cmp	rest, tmp1	// ZF_DIST + CACHE_LINE_SIZE * 2
-	b.ge	1b
-	cbnz	rest, L(unroll8)
-	ret
+L(L2):
+	tst	valw, 255
+	b.ne	L(unroll8)
+        // align dst to CACHE_LINE_SIZE byte boundary
+	and	tmp2, dst, CACHE_LINE_SIZE - 1
+	st1b	z0.b, p0, [dst, 0, mul vl]
+	st1b	z0.b, p0, [dst, 1, mul vl]
+	st1b	z0.b, p0, [dst, 2, mul vl]
+	st1b	z0.b, p0, [dst, 3, mul vl]
+	sub	dst, dst, tmp2
+	add	count, count, tmp2
+
+	// clear cachelines using DC ZVA
+	sub	count, count, CACHE_LINE_SIZE * 2
+	.p2align 4
+1:	add	dst, dst, CACHE_LINE_SIZE
+	dc	zva, dst
+	subs	count, count, CACHE_LINE_SIZE
+	b.hi	1b
+	add	count, count, CACHE_LINE_SIZE
+	b	L(last)
 
 END (MEMSET)
 libc_hidden_builtin_def (MEMSET)

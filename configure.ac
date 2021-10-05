@@ -995,18 +995,31 @@ AC_CHECK_PROG_VER(AS, $AS, --version,
 		  [2.1[0-9][0-9]*|2.2[5-9]*|2.[3-9][0-9]*|[3-9].*|[1-9][0-9]*],
 		  AS=: critic_missing="$critic_missing as")
 
-if test -n "`$LD --version | sed -n 's/^GNU \(gold\).*$/\1/p'`"; then
+libc_cv_with_lld=no
+case $($LD --version) in
+  "GNU gold"*)
   # Accept gold 1.14 or higher
-  AC_CHECK_PROG_VER(LD, $LD, --version,
+    AC_CHECK_PROG_VER(LD, $LD, --version,
 		    [GNU gold.* \([0-9][0-9]*\.[0-9.]*\)],
 		    [1.1[4-9]*|1.[2-9][0-9]*|1.1[0-9][0-9]*|[2-9].*|[1-9][0-9]*],
 		    LD=: critic_missing="$critic_missing GNU gold")
-else
-  AC_CHECK_PROG_VER(LD, $LD, --version,
+    ;;
+  "LLD"*)
+  # Accept LLD 13.0.0 or higher
+    AC_CHECK_PROG_VER(LD, $LD, --version,
+		    [LLD.* \([0-9][0-9]*\.[0-9.]*\)],
+		    [1[3-9].*|[2-9][0-9].*],
+		    LD=: critic_missing="$critic_missing LLD")
+    libc_cv_with_lld=yes
+    ;;
+  *)
+    AC_CHECK_PROG_VER(LD, $LD, --version,
 		    [GNU ld.* \([0-9][0-9]*\.[0-9.]*\)],
 		    [2.1[0-9][0-9]*|2.2[5-9]*|2.[3-9][0-9]*|[3-9].*|[1-9][0-9]*],
 		    LD=: critic_missing="$critic_missing GNU ld")
-fi
+    ;;
+esac
+LIBC_CONFIG_VAR([with-lld], [$libc_cv_with_lld])
 
 # These programs are version sensitive.
 AC_CHECK_PROG_VER(MAKE, gnumake gmake make, --version,
@@ -1204,7 +1217,7 @@ AC_SUBST(libc_cv_protected_data)
 AC_CACHE_CHECK(linker support for INSERT in linker script,
 	       libc_cv_insert,
 	       [cat > conftest.c <<EOF
-		const int __attribute__ ((section(".bar"))) bar = 0x12345678;
+		int __attribute__ ((section(".bar"))) bar = 0x12345678;
 		int test (void) { return bar; }
 EOF
 		cat > conftest.t <<EOF
@@ -1336,6 +1349,10 @@ AC_SUBST(libc_cv_z_execstack)
 LIBC_LINKER_FEATURE([-z start-stop-gc], [-Wl,-z,start-stop-gc],
 		    [libc_cv_z_start_stop_gc=yes], [libc_cv_z_start_stop_gc=no])
 LIBC_CONFIG_VAR([have-z-start-stop-gc], [$libc_cv_z_start_stop_gc])
+
+LIBC_LINKER_FEATURE([--depaudit], [-Wl,--depaudit,x],
+		    [libc_cv_depaudit=yes], [libc_cv_depaudit=no])
+LIBC_CONFIG_VAR([have-depaudit], [$libc_cv_depaudit])
 
 LIBC_LINKER_FEATURE([--no-dynamic-linker],
 		    [-Wl,--no-dynamic-linker],
@@ -1661,40 +1678,6 @@ if test $libc_cv_predef_fortify_source = yes; then
   CPPUNDEFS="${CPPUNDEFS:+$CPPUNDEFS }-U_FORTIFY_SOURCE"
 fi
 AC_SUBST(CPPUNDEFS)
-
-# Some linkers on some architectures support __ehdr_start but with
-# bugs.  Make sure usage of it does not create relocations in the
-# output (as the linker should resolve them all for us).
-AC_CACHE_CHECK([whether the linker provides working __ehdr_start],
-	       libc_cv_ehdr_start, [
-old_CFLAGS="$CFLAGS"
-old_LDFLAGS="$LDFLAGS"
-old_LIBS="$LIBS"
-CFLAGS="$CFLAGS -fPIC"
-LDFLAGS="$LDFLAGS -nostdlib -nostartfiles -shared $no_ssp"
-LIBS=
-AC_LINK_IFELSE([AC_LANG_SOURCE([
-typedef struct {
-  char foo;
-  long val;
-} Ehdr;
-extern const Ehdr __ehdr_start __attribute__ ((visibility ("hidden")));
-long ehdr (void) { return __ehdr_start.val; }
-])],
-	       [if $READELF -r conftest | grep -F __ehdr_start >/dev/null; then
-		  libc_cv_ehdr_start=broken
-		else
-		  libc_cv_ehdr_start=yes
-		fi], [libc_cv_ehdr_start=no])
-CFLAGS="$old_CFLAGS"
-LDFLAGS="$old_LDFLAGS"
-LIBS="$old_LIBS"
-])
-if test "$libc_cv_ehdr_start" = yes; then
-  AC_DEFINE([HAVE_EHDR_START])
-elif test "$libc_cv_ehdr_start" = broken; then
-  AC_MSG_WARN([linker is broken -- you should upgrade])
-fi
 
 dnl Starting with binutils 2.35, GAS can attach multiple symbol versions
 dnl to one symbol (PR 23840).

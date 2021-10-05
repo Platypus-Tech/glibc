@@ -27,7 +27,11 @@
 
 /* Include the real math.h to avoid optimizations caused by include/math.h
    (e.x fabsf128 prototype is masked by an inline definition).*/
+#define f64xfmaf128 __hide_f64xfmaf128
+#define f64xsqrtf128 __hide_f64xsqrtf128
 #include <math/math.h>
+#undef f64xfmaf128
+#undef f64xsqrtf128
 #include <math_private.h>
 #include <complex.h>
 #include <first-versions.h>
@@ -36,6 +40,7 @@
 
 #include <libm-alias-float128.h>
 #include <libm-alias-finite.h>
+#include <math-narrow-alias.h>
 
 /* _F128_IFUNC2(func, from, r)
       Generate an ifunc symbol func ## r from the symbols
@@ -148,6 +153,12 @@
 
 /* scalbnf128 is an alias of ldexpf128.  */
 #define DECL_ALIAS_s_ldexp(f) MAKE_IFUNCP_R (f,) MAKE_IFUNCP_WRAP_R (wrap_, scalbn,)
+
+/* f64xfmaf128 is an alias of fmaf128.  */
+#define DECL_ALIAS_s_fma(f) MAKE_IFUNCP_R (f,) libm_alias_float128_narrow (__fma, fma)
+
+/* f64xsqrtf128 is an alias of sqrtf128.  */
+#define DECL_ALIAS_w_sqrt(f) MAKE_IFUNCP_R (f,) libm_alias_float128_narrow (__sqrt, sqrt)
 
 /* Declare an IFUNC for a symbol which only exists
    to provide long double == ieee128 ABI.  */

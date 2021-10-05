@@ -22,9 +22,6 @@
 
 	.text
 ENTRY (_ZGVeN16v_cosf_knl)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512 _ZGVdN8v_cosf
-#else
 /*
   ALGORITHM DESCRIPTION:
 
@@ -235,13 +232,9 @@ WRAPPER_IMPL_AVX512 _ZGVdN8v_cosf
         call      JUMPTARGET(cosf)
         vmovss    %xmm0, 1216(%rsp,%r15,8)
         jmp       .LBL_1_7
-#endif
 END (_ZGVeN16v_cosf_knl)
 
 ENTRY (_ZGVeN16v_cosf_skx)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512 _ZGVdN8v_cosf
-#else
 /*
   ALGORITHM DESCRIPTION:
 
@@ -278,7 +271,7 @@ WRAPPER_IMPL_AVX512 _ZGVdN8v_cosf
   X = X - Y*PI1 - Y*PI2 - Y*PI3
  */
         vmovaps   %zmm0, %zmm6
-        vmovups   .L_2il0floatpacket.13(%rip), %zmm12
+        vpternlogd $0xff, %zmm12, %zmm12, %zmm12
         vmovups __sRShifter(%rax), %zmm3
         vmovups __sPI1_FMA(%rax), %zmm5
         vmovups __sA9_FMA(%rax), %zmm9
@@ -451,10 +444,4 @@ WRAPPER_IMPL_AVX512 _ZGVdN8v_cosf
         call      JUMPTARGET(cosf)
         vmovss    %xmm0, 1216(%rsp,%r15,8)
         jmp       .LBL_2_7
-#endif
 END (_ZGVeN16v_cosf_skx)
-
-	.section .rodata, "a"
-.L_2il0floatpacket.13:
-	.long	0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff
-	.type	.L_2il0floatpacket.13,@object

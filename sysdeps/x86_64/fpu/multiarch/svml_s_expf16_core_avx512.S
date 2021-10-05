@@ -22,9 +22,6 @@
 
 	.text
 ENTRY (_ZGVeN16v_expf_knl)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512 _ZGVdN8v_expf
-#else
 /*
    ALGORITHM DESCRIPTION:
 
@@ -223,13 +220,9 @@ WRAPPER_IMPL_AVX512 _ZGVdN8v_expf
         vmovss    %xmm0, 1216(%rsp,%r15,8)
         jmp       .LBL_1_7
 
-#endif
 END (_ZGVeN16v_expf_knl)
 
 ENTRY (_ZGVeN16v_expf_skx)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512 _ZGVdN8v_expf
-#else
 /*
    ALGORITHM DESCRIPTION:
 
@@ -264,7 +257,7 @@ WRAPPER_IMPL_AVX512 _ZGVdN8v_expf
         vmovaps   %zmm0, %zmm7
 
 /* compare against threshold */
-        vmovups   .L_2il0floatpacket.13(%rip), %zmm3
+        vpternlogd $0xff, %zmm3, %zmm3, %zmm3
         vmovups __sInvLn2(%rax), %zmm4
         vmovups __sShifter(%rax), %zmm1
         vmovups __sLn2hi(%rax), %zmm6
@@ -438,10 +431,4 @@ WRAPPER_IMPL_AVX512 _ZGVdN8v_expf
         vmovss    %xmm0, 1216(%rsp,%r15,8)
         jmp       .LBL_2_7
 
-#endif
 END (_ZGVeN16v_expf_skx)
-
-	.section .rodata, "a"
-.L_2il0floatpacket.13:
-	.long	0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff
-	.type	.L_2il0floatpacket.13,@object

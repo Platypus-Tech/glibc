@@ -37,9 +37,6 @@
 
 	.text
 ENTRY (_ZGVeN8vl8l8_sincos_knl)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512_fFF _ZGVdN4vl8l8_sincos
-#else
         pushq     %rbp
         cfi_adjust_cfa_offset (8)
         cfi_rel_offset (%rbp, 0)
@@ -303,14 +300,10 @@ WRAPPER_IMPL_AVX512_fFF _ZGVdN4vl8l8_sincos
         vmovsd    %xmm0, 1280(%rsp,%r15)
         jmp       .LBL_1_7
 
-#endif
 END (_ZGVeN8vl8l8_sincos_knl)
 libmvec_hidden_def(_ZGVeN8vl8l8_sincos_knl)
 
 ENTRY (_ZGVeN8vl8l8_sincos_skx)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512_fFF _ZGVdN4vl8l8_sincos
-#else
         pushq     %rbp
         cfi_adjust_cfa_offset (8)
         cfi_rel_offset (%rbp, 0)
@@ -430,7 +423,7 @@ WRAPPER_IMPL_AVX512_fFF _ZGVdN4vl8l8_sincos
 
 /* SinPoly = SinR*SinPoly */
         vfmadd213pd %zmm5, %zmm5, %zmm4
-        vpbroadcastq .L_2il0floatpacket.15(%rip), %zmm3
+        vpternlogd $0xff, %zmm3, %zmm3, %zmm3
 
 /* Update Cos result's sign */
         vxorpd    %zmm2, %zmm1, %zmm1
@@ -585,7 +578,6 @@ WRAPPER_IMPL_AVX512_fFF _ZGVdN4vl8l8_sincos
         vmovsd    %xmm0, 1280(%rsp,%r15)
         jmp       .LBL_2_7
 
-#endif
 END (_ZGVeN8vl8l8_sincos_skx)
 libmvec_hidden_def(_ZGVeN8vl8l8_sincos_skx)
 
@@ -741,8 +733,3 @@ END (_ZGVeN8vvv_sincos_knl)
 ENTRY (_ZGVeN8vvv_sincos_skx)
 WRAPPER_AVX512_vvv_vl8l8 _ZGVeN8vl8l8_sincos_skx
 END (_ZGVeN8vvv_sincos_skx)
-
-	.section .rodata, "a"
-.L_2il0floatpacket.15:
-	.long	0xffffffff,0xffffffff
-	.type	.L_2il0floatpacket.15,@object

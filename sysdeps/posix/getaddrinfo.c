@@ -239,7 +239,7 @@ convert_hostent_to_gaih_addrtuple (const struct addrinfo *req,
   return true;
 }
 
-#define gethosts(_family, _type) \
+#define gethosts(_family) \
  {									      \
   struct hostent th;							      \
   char *localcanon = NULL;						      \
@@ -829,7 +829,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 		      if (req->ai_family == AF_INET6
 			  || req->ai_family == AF_UNSPEC)
 			{
-			  gethosts (AF_INET6, struct in6_addr);
+			  gethosts (AF_INET6);
 			  no_inet6_data = no_data;
 			  inet6_status = status;
 			}
@@ -841,7 +841,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 				 know we are not going to need them.  */
 			      && ((req->ai_flags & AI_ALL) || !got_ipv6)))
 			{
-			  gethosts (AF_INET, struct in_addr);
+			  gethosts (AF_INET);
 
 			  if (req->ai_family == AF_INET)
 			    {
@@ -2008,6 +2008,7 @@ gaiconf_init (void)
 	      l = l->next;
 	    }
 	  free_prefixlist (labellist);
+	  labellist = NULL;
 
 	  /* Sort the entries so that the most specific ones are at
 	     the beginning.  */
@@ -2046,6 +2047,7 @@ gaiconf_init (void)
 	      l = l->next;
 	    }
 	  free_prefixlist (precedencelist);
+	  precedencelist = NULL;
 
 	  /* Sort the entries so that the most specific ones are at
 	     the beginning.  */

@@ -1,6 +1,5 @@
 /* Copyright (C) 2002-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
-   Contributed by Ulrich Drepper <drepper@redhat.com>, 2002.
 
    The GNU C Library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -62,10 +61,11 @@ __pthread_cancel (pthread_t th)
 {
   volatile struct pthread *pd = (volatile struct pthread *) th;
 
-  /* Make sure the descriptor is valid.  */
-  if (INVALID_TD_P (pd))
-    /* Not a valid thread handle.  */
-    return ESRCH;
+  if (pd->tid == 0)
+    /* The thread has already exited on the kernel side.  Its outcome
+       (regular exit, other cancelation) has already been
+       determined.  */
+    return 0;
 
   static int init_sigcancel = 0;
   if (atomic_load_relaxed (&init_sigcancel) == 0)

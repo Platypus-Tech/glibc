@@ -205,6 +205,7 @@ struct link_map
     unsigned int l_free_initfini:1; /* Nonzero if l_initfini can be
 				       freed, ie. not allocated with
 				       the dummy malloc in ld.so.  */
+    unsigned int l_ld_readonly:1; /* Nonzero if dynamic section is readonly.  */
 
     /* NODELETE status of the map.  Only valid for maps of type
        lt_loaded.  Lazy binding sets l_nodelete_active directly,
@@ -342,6 +343,8 @@ struct link_map
     unsigned long long int l_serial;
   };
 
+#include <dl-relocate-ld.h>
+
 /* Information used by audit modules.  For most link maps, this data
    immediate follows the link map in memory.  For the dynamic linker,
    it is allocated separately.  See link_map_audit_state in
@@ -352,6 +355,10 @@ struct auditstate
   unsigned int bindflags;
 };
 
+
+/* This is the hidden instance of struct r_debug_extended used by the
+   dynamic linker.  */
+extern struct r_debug_extended _r_debug_extended attribute_hidden;
 
 #if __ELF_NATIVE_CLASS == 32
 # define symbind symbind32

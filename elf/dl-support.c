@@ -183,7 +183,7 @@ uint64_t _dl_hwcap_mask;
  * executable but this isn't true for all platforms.  */
 ElfW(Word) _dl_stack_flags = DEFAULT_STACK_PERMS;
 
-#if THREAD_GSCOPE_IN_TCB
+#if PTHREAD_IN_LIBC
 list_t _dl_stack_used;
 list_t _dl_stack_user;
 list_t _dl_stack_cache;
@@ -195,7 +195,6 @@ int _dl_stack_cache_lock;
    when it was not, we do it by calling this function.
    It returns an errno code or zero on success.  */
 int (*_dl_make_stack_executable_hook) (void **) = _dl_make_stack_executable;
-int _dl_thread_gscope_count;
 void (*_dl_init_static_tls) (struct link_map *) = &_dl_nothread_init_static_tls;
 #endif
 struct dl_scope_free_list *_dl_scope_free_list;
@@ -229,6 +228,13 @@ __rtld_lock_define_initialized_recursive (, _dl_load_lock)
    list of loaded objects while an object is added to or removed from
    that list.  */
 __rtld_lock_define_initialized_recursive (, _dl_load_write_lock)
+  /* This lock protects global and module specific TLS related data.
+     E.g. it is held in dlopen and dlclose when GL(dl_tls_generation),
+     GL(dl_tls_max_dtv_idx) or GL(dl_tls_dtv_slotinfo_list) are
+     accessed and when TLS related relocations are processed for a
+     module.  It was introduced to keep pthread_create accessing TLS
+     state that is being set up.  */
+__rtld_lock_define_initialized_recursive (, _dl_load_tls_lock)
 
 
 #ifdef HAVE_AUX_VECTOR

@@ -27,17 +27,26 @@
 #include <math-barriers.h>
 #include <math_private.h>
 #include <fenv_private.h>
+#include <math-narrow-alias.h>
+#include <stdbool.h>
 
 /* Carry out a computation using round-to-odd.  The computation is
    EXPR; the union type in which to store the result is UNION and the
    subfield of the "ieee" field of that union with the low part of the
-   mantissa is MANTISSA; SUFFIX is the suffix for the libc_fe* macros
-   to ensure that the correct rounding mode is used, for platforms
-   with multiple rounding modes where those macros set only the
-   relevant mode.  This macro does not work correctly if the sign of
-   an exact zero result depends on the rounding mode, so that case
-   must be checked for separately.  */
-#define ROUND_TO_ODD(EXPR, UNION, SUFFIX, MANTISSA)			\
+   mantissa is MANTISSA; SUFFIX is the suffix for both underlying libm
+   functions for the argument type (for computations where a libm
+   function rather than a C operator is used when argument and result
+   types are the same) and the libc_fe* macros to ensure that the
+   correct rounding mode is used, for platforms with multiple rounding
+   modes where those macros set only the relevant mode.
+   CLEAR_UNDERFLOW indicates whether underflow exceptions must be
+   cleared (in the case where a round-toward-zero underflow might not
+   indicate an underflow after narrowing, when that narrowing only
+   reduces precision not exponent range and the architecture uses
+   before-rounding tininess detection).  This macro does not work
+   correctly if the sign of an exact zero result depends on the
+   rounding mode, so that case must be checked for separately.  */
+#define ROUND_TO_ODD(EXPR, UNION, SUFFIX, MANTISSA, CLEAR_UNDERFLOW)	\
   ({									\
     fenv_t env;								\
     UNION u;								\
@@ -45,6 +54,8 @@
     libc_feholdexcept_setround ## SUFFIX (&env, FE_TOWARDZERO);		\
     u.d = (EXPR);							\
     math_force_eval (u.d);						\
+    if (CLEAR_UNDERFLOW)						\
+      feclearexcept (FE_UNDERFLOW);					\
     u.ieee.MANTISSA							\
       |= libc_feupdateenv_test ## SUFFIX (&env, FE_INEXACT) != 0;	\
 									\
@@ -87,7 +98,7 @@
 	ret = (TYPE) ((X) + (Y));					\
       else								\
 	ret = (TYPE) ROUND_TO_ODD (math_opt_barrier (X) + (Y),		\
-				   UNION, SUFFIX, MANTISSA);		\
+				   UNION, SUFFIX, MANTISSA, false);	\
 									\
       CHECK_NARROW_ADD (ret, (X), (Y));					\
       return ret;							\
@@ -145,7 +156,7 @@
 	ret = (TYPE) ((X) - (Y));					\
       else								\
 	ret = (TYPE) ROUND_TO_ODD (math_opt_barrier (X) - (Y),		\
-				   UNION, SUFFIX, MANTISSA);		\
+				   UNION, SUFFIX, MANTISSA, false);	\
 									\
       CHECK_NARROW_SUB (ret, (X), (Y));					\
       return ret;							\
@@ -190,15 +201,17 @@
   while (0)
 
 /* Implement narrowing multiply using round-to-odd.  The arguments are
-   X and Y, the return type is TYPE and UNION, MANTISSA and SUFFIX are
-   as for ROUND_TO_ODD.  */
-#define NARROW_MUL_ROUND_TO_ODD(X, Y, TYPE, UNION, SUFFIX, MANTISSA)	\
+   X and Y, the return type is TYPE and UNION, MANTISSA, SUFFIX and
+   CLEAR_UNDERFLOW are as for ROUND_TO_ODD.  */
+#define NARROW_MUL_ROUND_TO_ODD(X, Y, TYPE, UNION, SUFFIX, MANTISSA,	\
+				CLEAR_UNDERFLOW)			\
   do									\
     {									\
       TYPE ret;								\
 									\
       ret = (TYPE) ROUND_TO_ODD (math_opt_barrier (X) * (Y),		\
-				 UNION, SUFFIX, MANTISSA);		\
+				 UNION, SUFFIX, MANTISSA,		\
+				 CLEAR_UNDERFLOW);			\
 									\
       CHECK_NARROW_MUL (ret, (X), (Y));					\
       return ret;							\
@@ -242,16 +255,18 @@
     }							\
   while (0)
 
-/* Implement narrowing divide using round-to-odd.  The arguments are
-   X and Y, the return type is TYPE and UNION, MANTISSA and SUFFIX are
-   as for ROUND_TO_ODD.  */
-#define NARROW_DIV_ROUND_TO_ODD(X, Y, TYPE, UNION, SUFFIX, MANTISSA)	\
+/* Implement narrowing divide using round-to-odd.  The arguments are X
+   and Y, the return type is TYPE and UNION, MANTISSA, SUFFIX and
+   CLEAR_UNDERFLOW are as for ROUND_TO_ODD.  */
+#define NARROW_DIV_ROUND_TO_ODD(X, Y, TYPE, UNION, SUFFIX, MANTISSA,	\
+				CLEAR_UNDERFLOW)			\
   do									\
     {									\
       TYPE ret;								\
 									\
       ret = (TYPE) ROUND_TO_ODD (math_opt_barrier (X) / (Y),		\
-				 UNION, SUFFIX, MANTISSA);		\
+				 UNION, SUFFIX, MANTISSA,		\
+				 CLEAR_UNDERFLOW);			\
 									\
       CHECK_NARROW_DIV (ret, (X), (Y));					\
       return ret;							\
@@ -273,85 +288,111 @@
     }						\
   while (0)
 
-/* The following macros declare aliases for a narrowing function.  The
-   sole argument is the base name of a family of functions, such as
-   "add".  If any platform changes long double format after the
-   introduction of narrowing functions, in a way requiring symbol
-   versioning compatibility, additional variants of these macros will
-   be needed.  */
+/* Check for error conditions from a narrowing square root function
+   returning RET with argument X and set errno as needed.  Overflow
+   and underflow can occur for finite positive arguments and a domain
+   error for negative arguments.  */
+#define CHECK_NARROW_SQRT(RET, X)		\
+  do						\
+    {						\
+      if (!isfinite (RET))			\
+	{					\
+	  if (isnan (RET))			\
+	    {					\
+	      if (!isnan (X))			\
+		__set_errno (EDOM);		\
+	    }					\
+	  else if (isfinite (X))		\
+	    __set_errno (ERANGE);		\
+	}					\
+      else if ((RET) == 0 && (X) != 0)		\
+	__set_errno (ERANGE);			\
+    }						\
+  while (0)
 
-#define libm_alias_float_double_main(func)	\
-  weak_alias (__f ## func, f ## func)		\
-  weak_alias (__f ## func, f32 ## func ## f64)	\
-  weak_alias (__f ## func, f32 ## func ## f32x)
+/* Implement narrowing square root using round-to-odd.  The argument
+   is X, the return type is TYPE and UNION, MANTISSA and SUFFIX are as
+   for ROUND_TO_ODD.  */
+#define NARROW_SQRT_ROUND_TO_ODD(X, TYPE, UNION, SUFFIX, MANTISSA)	\
+  do									\
+    {									\
+      TYPE ret;								\
+									\
+      ret = (TYPE) ROUND_TO_ODD (sqrt ## SUFFIX (math_opt_barrier (X)),	\
+				 UNION, SUFFIX, MANTISSA, false);	\
+									\
+      CHECK_NARROW_SQRT (ret, (X));					\
+      return ret;							\
+    }									\
+  while (0)
 
-#ifdef NO_LONG_DOUBLE
-# define libm_alias_float_double(func)		\
-  libm_alias_float_double_main (func)		\
-  weak_alias (__f ## func, f ## func ## l)
-#else
-# define libm_alias_float_double(func)		\
-  libm_alias_float_double_main (func)
-#endif
+/* Implement a narrowing square root function where no attempt is made
+   to be correctly rounding (this only applies to IBM long double; the
+   case where the function is not actually narrowing is handled by
+   aliasing other sqrt functions in libm, not using this macro).  The
+   argument is X and the return type is TYPE.  */
+#define NARROW_SQRT_TRIVIAL(X, TYPE, SUFFIX)	\
+  do						\
+    {						\
+      TYPE ret;					\
+						\
+      ret = (TYPE) (sqrt ## SUFFIX (X));	\
+      CHECK_NARROW_SQRT (ret, (X));		\
+      return ret;				\
+    }						\
+  while (0)
 
-#define libm_alias_float32x_float64_main(func)			\
-  weak_alias (__f32x ## func ## f64, f32x ## func ## f64)
+/* Check for error conditions from a narrowing fused multiply-add
+   function returning RET with arguments X, Y and Z and set errno as
+   needed.  Checking for error conditions for fma (either narrowing or
+   not) and setting errno is not currently implemented.  See bug
+   6801.  */
+#define CHECK_NARROW_FMA(RET, X, Y, Z)		\
+  do						\
+    {						\
+    }						\
+  while (0)
 
-#ifdef NO_LONG_DOUBLE
-# define libm_alias_float32x_float64(func)		\
-  libm_alias_float32x_float64_main (func)		\
-  weak_alias (__f32x ## func ## f64, d ## func ## l)
-#elif defined __LONG_DOUBLE_MATH_OPTIONAL
-# define libm_alias_float32x_float64(func)			\
-  libm_alias_float32x_float64_main (func)			\
-  weak_alias (__f32x ## func ## f64, __nldbl_d ## func ## l)
-#else
-# define libm_alias_float32x_float64(func)	\
-  libm_alias_float32x_float64_main (func)
-#endif
+/* Implement narrowing fused multiply-add using round-to-odd.  The
+   arguments are X, Y and Z, the return type is TYPE and UNION,
+   MANTISSA, SUFFIX and CLEAR_UNDERFLOW are as for ROUND_TO_ODD.  */
+#define NARROW_FMA_ROUND_TO_ODD(X, Y, Z, TYPE, UNION, SUFFIX, MANTISSA, \
+				CLEAR_UNDERFLOW)			\
+  do									\
+    {									\
+      typeof (X) tmp;							\
+      TYPE ret;								\
+									\
+      tmp = ROUND_TO_ODD (fma ## SUFFIX (math_opt_barrier (X), (Y),	\
+					 (Z)),				\
+			  UNION, SUFFIX, MANTISSA, CLEAR_UNDERFLOW);	\
+      /* If the round-to-odd result is zero, the result is an exact	\
+	 zero and must be recomputed in the original rounding mode.  */ \
+      if (tmp == 0)							\
+	ret = (TYPE) (math_opt_barrier (X) * (Y) + (Z));		\
+      else								\
+	ret = (TYPE) tmp;						\
+									\
+      CHECK_NARROW_FMA (ret, (X), (Y), (Z));				\
+      return ret;							\
+    }									\
+  while (0)
 
-#if __HAVE_FLOAT128 && !__HAVE_DISTINCT_FLOAT128
-# define libm_alias_float_ldouble_f128(func)		\
-  weak_alias (__f ## func ## l, f32 ## func ## f128)
-# define libm_alias_double_ldouble_f128(func)		\
-  weak_alias (__d ## func ## l, f32x ## func ## f128)	\
-  weak_alias (__d ## func ## l, f64 ## func ## f128)
-#else
-# define libm_alias_float_ldouble_f128(func)
-# define libm_alias_double_ldouble_f128(func)
-#endif
-
-#if __HAVE_FLOAT64X_LONG_DOUBLE
-# define libm_alias_float_ldouble_f64x(func)		\
-  weak_alias (__f ## func ## l, f32 ## func ## f64x)
-# define libm_alias_double_ldouble_f64x(func)		\
-  weak_alias (__d ## func ## l, f32x ## func ## f64x)	\
-  weak_alias (__d ## func ## l, f64 ## func ## f64x)
-#else
-# define libm_alias_float_ldouble_f64x(func)
-# define libm_alias_double_ldouble_f64x(func)
-#endif
-
-#define libm_alias_float_ldouble(func)		\
-  weak_alias (__f ## func ## l, f ## func ## l) \
-  libm_alias_float_ldouble_f128 (func)		\
-  libm_alias_float_ldouble_f64x (func)
-
-#define libm_alias_double_ldouble(func)		\
-  weak_alias (__d ## func ## l, d ## func ## l) \
-  libm_alias_double_ldouble_f128 (func)		\
-  libm_alias_double_ldouble_f64x (func)
-
-#define libm_alias_float64x_float128(func)			\
-  weak_alias (__f64x ## func ## f128, f64x ## func ## f128)
-
-#define libm_alias_float32_float128_main(func)			\
-  weak_alias (__f32 ## func ## f128, f32 ## func ## f128)
-
-#define libm_alias_float64_float128_main(func)			\
-  weak_alias (__f64 ## func ## f128, f64 ## func ## f128)	\
-  weak_alias (__f64 ## func ## f128, f32x ## func ## f128)
-
-#include <math-narrow-alias-float128.h>
+/* Implement a narrowing fused multiply-add function where no attempt
+   is made to be correctly rounding (this only applies to IBM long
+   double; the case where the function is not actually narrowing is
+   handled by aliasing other fma functions in libm, not using this
+   macro).  The arguments are X, Y and Z and the return type is
+   TYPE.  */
+#define NARROW_FMA_TRIVIAL(X, Y, Z, TYPE, SUFFIX)	\
+  do							\
+    {							\
+      TYPE ret;						\
+							\
+      ret = (TYPE) (fma ## SUFFIX ((X), (Y), (Z)));	\
+      CHECK_NARROW_FMA (ret, (X), (Y), (Z));		\
+      return ret;					\
+    }							\
+  while (0)
 
 #endif /* math-narrow.h.  */

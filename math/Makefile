@@ -60,7 +60,10 @@ gen-libm-calls = cargF conjF cimagF crealF cabsF e_scalbF s_cacosF	  \
 		 w_exp2F w_fmodF w_hypotF w_j0F w_j1F w_jnF w_logF	  \
 		 w_log10F w_log2F w_powF w_remainderF w_scalbF		  \
 		 w_sinhF w_sqrtF					  \
-		 w_tgammaF w_lgammaF w_lgammaF_r w_expF e_exp2F
+		 w_tgammaF w_lgammaF w_lgammaF_r w_expF e_exp2F		  \
+		 s_fmaximumF s_fmaximum_magF s_fmaximum_numF		  \
+		 s_fmaximum_mag_numF s_fminimumF s_fminimum_magF	  \
+		 s_fminimum_numF s_fminimum_mag_numF
 
 libm-calls =								  \
 	e_acosF e_acoshF e_asinF e_atan2F e_atanhF e_coshF e_expF e_fmodF \
@@ -91,7 +94,7 @@ libm-compat-calls =							\
 	w_lgammaF_r_compat w_lgammaF_compat2 w_expF_compat		\
 	w_lgamma_compatF k_standardF
 
-libm-narrow-fns = add div mul sub
+libm-narrow-fns = add div fma mul sqrt sub
 libm-narrow-types-basic = s_fF s_f32xFf64
 libm-narrow-types-ldouble-yes = s_fFl s_dFl
 libm-narrow-types-float128-yes = s_f32Ff128 s_f64Ff128 s_f64xFf128
@@ -287,9 +290,11 @@ libm-test-funcs-auto = acos acosh asin asinh atan atan2 atanh cabs cacos \
 		       lgamma log log10 log1p log2 pow sin sincos sinh sqrt \
 		       tan tanh tgamma y0 y1 yn
 libm-test-funcs-noauto = canonicalize ceil cimag conj copysign cproj creal \
-			 fabs fdim floor fmax fmaxmag fmin fminmag fmod \
-			 fpclassify frexp fromfp fromfpx getpayload ilogb \
-			 iscanonical iseqsig isfinite isgreater \
+			 fabs fdim floor fmax fmaximum fmaximum_mag \
+			 fmaximum_mag_num fmaximum_num fmaxmag fmin fminimum \
+			 fminimum_mag fminimum_mag_num fminimum_num fminmag \
+			 fmod fpclassify frexp fromfp fromfpx getpayload \
+			 ilogb iscanonical iseqsig isfinite isgreater \
 			 isgreaterequal isinf isless islessequal \
 			 islessgreater isnan isnormal issignaling issubnormal \
 			 isunordered iszero llogb llrint llround logb lrint \
@@ -299,7 +304,7 @@ libm-test-funcs-noauto = canonicalize ceil cimag conj copysign cproj creal \
 			 significand totalorder totalordermag trunc ufromfp \
 			 ufromfpx compat_totalorder compat_totalordermag
 libm-test-funcs-compat = compat_totalorder compat_totalordermag
-libm-test-funcs-narrow = add div mul sub
+libm-test-funcs-narrow = add div fma mul sqrt sub
 libm-test-funcs-all = $(libm-test-funcs-auto) $(libm-test-funcs-noauto)
 libm-test-c-auto = $(foreach f,$(libm-test-funcs-auto),libm-test-$(f).c)
 libm-test-c-noauto = $(foreach f,$(libm-test-funcs-noauto),libm-test-$(f).c)
@@ -369,13 +374,15 @@ $(foreach t,$(libm-tests-base),\
 tgmath3-narrow-types = f d f16 f32 f64 f128 f32x f64x
 tgmath3-narrow-macros = $(foreach t,$(tgmath3-narrow-types), \
 				    $(foreach f,$(libm-narrow-fns),$(t)$(f)))
-tgmath3-macros = atan2 cbrt ceil copysign erf erfc exp2 expm1 fdim floor \
-		 fma fmax fmin fmod frexp hypot ilogb ldexp lgamma llrint \
-		 llround log10 log1p log2 logb lrint lround nearbyint \
+tgmath3-macros = atan2 cbrt ceil copysign erf erfc exp10 exp2 expm1 fdim \
+		 floor fma fmax fmin fmod frexp hypot ilogb ldexp lgamma \
+		 llrint llround log10 log1p log2 logb lrint lround nearbyint \
 		 nextafter nexttoward remainder remquo rint round scalbn \
 		 scalbln tgamma trunc acos asin atan acosh asinh atanh cos \
 		 sin tan cosh sinh tanh exp log pow sqrt fabs carg cimag conj \
-		 cproj creal roundeven nextup nextdown fminmag fmaxmag llogb \
+		 cproj creal roundeven nextup nextdown fminmag fmaxmag \
+		 fmaximum fmaximum_mag fmaximum_num fmaximum_mag_num \
+		 fminimum fminimum_mag fminimum_num fminimum_mag_num llogb \
 		 fromfp fromfpx ufromfp ufromfpx scalb $(tgmath3-narrow-macros)
 tgmath3-macro-tests = $(addprefix test-tgmath3-,$(tgmath3-macros))
 tests += $(tgmath3-macro-tests)
@@ -663,7 +670,9 @@ CFLAGS-s_ctan.c += -fno-builtin-ctanl
 CFLAGS-s_ctanh.c += -fno-builtin-ctanhl
 CFLAGS-s_dadd.c += -fno-builtin-daddl
 CFLAGS-s_ddiv.c += -fno-builtin-ddivl
+CFLAGS-s_dfma.c += -fno-builtin-dfmal
 CFLAGS-s_dmul.c += -fno-builtin-dmull
+CFLAGS-s_dsqrt.c += -fno-builtin-dsqrtl
 CFLAGS-s_dsub.c += -fno-builtin-dsubl
 CFLAGS-s_erf.c += -fno-builtin-erfl
 CFLAGS-s_erfc.c += -fno-builtin-erfcl
@@ -675,18 +684,28 @@ CFLAGS-s_fabs.c += -fno-builtin-fabsl
 CFLAGS-s_fadd.c += -fno-builtin-faddl
 CFLAGS-s_fdim.c += -fno-builtin-fdiml
 CFLAGS-s_fdiv.c += -fno-builtin-fdivl
+CFLAGS-s_ffma.c += -fno-builtin-ffmal
 CFLAGS-s_finite.c += -fno-builtin-finitel
 CFLAGS-s_floor.c += -fno-builtin-floorl
 CFLAGS-s_fma.c += -fno-builtin-fmal
 CFLAGS-s_fmax.c += -fno-builtin-fmaxl
+CFLAGS-s_fmaximum.c += -fno-builtin-fmaximuml
+CFLAGS-s_fmaximum_mag.c += -fno-builtin-fmaximum_magl
+CFLAGS-s_fmaximum_mag_num.c += -fno-builtin-fmaximum_mag_numl
+CFLAGS-s_fmaximum_num.c += -fno-builtin-fmaximum_numl
 CFLAGS-s_fmaxmag.c += -fno-builtin-fmaxmagl
 CFLAGS-s_fmin.c += -fno-builtin-fminl
+CFLAGS-s_fminimum.c += -fno-builtin-fminimuml
+CFLAGS-s_fminimum_mag.c += -fno-builtin-fminimum_magl
+CFLAGS-s_fminimum_mag_num.c += -fno-builtin-fminimum_mag_numl
+CFLAGS-s_fminimum_num.c += -fno-builtin-fminimum_numl
 CFLAGS-s_fminmag.c += -fno-builtin-fminmagl
 CFLAGS-w_fmod.c += -fno-builtin-fmodl
 CFLAGS-s_fmul.c += -fno-builtin-fmull
 CFLAGS-s_frexp.c += -fno-builtin-frexpl
 CFLAGS-s_fromfp.c += -fno-builtin-fromfpl
 CFLAGS-s_fromfpx.c += -fno-builtin-fromfpxl
+CFLAGS-s_fsqrt.c += -fno-builtin-fsqrtl
 CFLAGS-s_fsub.c += -fno-builtin-fsubl
 CFLAGS-s_gamma.c += -fno-builtin-gammal
 CFLAGS-s_getpayload.c += -fno-builtin-getpayloadl

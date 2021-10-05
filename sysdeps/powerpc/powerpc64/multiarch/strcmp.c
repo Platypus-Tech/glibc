@@ -35,12 +35,13 @@ extern __typeof (strcmp) __strcmp_power9 attribute_hidden;
 
 libc_ifunc_redirected (__redirect_strcmp, strcmp,
 # ifdef __LITTLE_ENDIAN__
-			(hwcap2 & PPC_FEATURE2_ARCH_3_00)
+			(hwcap2 & PPC_FEATURE2_ARCH_3_00
+			 && hwcap & PPC_FEATURE_HAS_ALTIVEC)
 			? __strcmp_power9 :
 # endif
 		       (hwcap2 & PPC_FEATURE2_ARCH_2_07)
 		       ? __strcmp_power8
-		       : (hwcap & PPC_FEATURE_HAS_VSX)
+		       : (hwcap & PPC_FEATURE_ARCH_2_06)
 			 ? __strcmp_power7
 			 : __strcmp_ppc);
 #endif

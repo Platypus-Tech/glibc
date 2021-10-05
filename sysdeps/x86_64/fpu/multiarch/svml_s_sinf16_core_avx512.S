@@ -22,9 +22,6 @@
 
 	.text
 ENTRY(_ZGVeN16v_sinf_knl)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512 _ZGVdN8v_sinf
-#else
 /*
    ALGORITHM DESCRIPTION:
 
@@ -239,13 +236,9 @@ WRAPPER_IMPL_AVX512 _ZGVdN8v_sinf
         call      JUMPTARGET(sinf)
         vmovss    %xmm0, 1216(%rsp,%r15,8)
         jmp       .LBL_1_7
-#endif
 END(_ZGVeN16v_sinf_knl)
 
 ENTRY (_ZGVeN16v_sinf_skx)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512 _ZGVdN8v_sinf
-#else
 /*
    ALGORITHM DESCRIPTION:
 
@@ -280,7 +273,7 @@ WRAPPER_IMPL_AVX512 _ZGVdN8v_sinf
         movq      __svml_s_trig_data@GOTPCREL(%rip), %rax
 
 /* Check for large and special values */
-        vmovups   .L_2il0floatpacket.11(%rip), %zmm14
+        vpternlogd $0xff, %zmm14, %zmm14, %zmm14
         vmovups __sAbsMask(%rax), %zmm5
         vmovups __sInvPI(%rax), %zmm1
         vmovups __sRShifter(%rax), %zmm2
@@ -470,10 +463,4 @@ WRAPPER_IMPL_AVX512 _ZGVdN8v_sinf
 
         vmovss    %xmm0, 1216(%rsp,%r15,8)
         jmp       .LBL_2_7
-#endif
 END (_ZGVeN16v_sinf_skx)
-
-	.section .rodata, "a"
-.L_2il0floatpacket.11:
-	.long	0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff
-	.type	.L_2il0floatpacket.11,@object

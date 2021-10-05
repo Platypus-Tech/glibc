@@ -17,14 +17,19 @@
    <https://www.gnu.org/licenses/>.  */
 
 #include "thrd_priv.h"
+#include <ldsodefs.h>
 
 #pragma weak __pthread_self
 #pragma weak __pthread_threads
 
+#ifndef SHARED
+#pragma weak _dl_pthread_threads
+#endif
+
 thrd_t
 thrd_current (void)
 {
-  if (__pthread_threads)
+  if (GL (dl_pthread_threads))
     return (thrd_t) __pthread_self ();
 
   return (thrd_t) 0;

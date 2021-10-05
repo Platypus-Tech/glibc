@@ -1,7 +1,6 @@
 /* Machine-dependent ELF dynamic relocation inline functions.  x86-64 version.
    Copyright (C) 2001-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
-   Contributed by Andreas Jaeger <aj@suse.de>.
 
    The GNU C Library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -35,27 +34,20 @@ elf_machine_matches_host (const ElfW(Ehdr) *ehdr)
 }
 
 
-/* Return the link-time address of _DYNAMIC.  Conveniently, this is the
-   first element of the GOT.  This must be inlined in a function which
-   uses global data.  */
-static inline ElfW(Addr) __attribute__ ((unused))
-elf_machine_dynamic (void)
-{
-  /* This produces an IP-relative reloc which is resolved at link time. */
-  extern const ElfW(Addr) _GLOBAL_OFFSET_TABLE_[] attribute_hidden;
-  return _GLOBAL_OFFSET_TABLE_[0];
-}
-
-
 /* Return the run-time load address of the shared object.  */
 static inline ElfW(Addr) __attribute__ ((unused))
 elf_machine_load_address (void)
 {
-  /* Compute the difference between the runtime address of _DYNAMIC as seen
-     by an IP-relative reference, and the link-time address found in the
-     special unrelocated first GOT entry.  */
+  extern const ElfW(Ehdr) __ehdr_start attribute_hidden;
+  return (ElfW(Addr)) &__ehdr_start;
+}
+
+/* Return the link-time address of _DYNAMIC.  */
+static inline ElfW(Addr) __attribute__ ((unused))
+elf_machine_dynamic (void)
+{
   extern ElfW(Dyn) _DYNAMIC[] attribute_hidden;
-  return (ElfW(Addr)) &_DYNAMIC - elf_machine_dynamic ();
+  return (ElfW(Addr)) _DYNAMIC - elf_machine_load_address ();
 }
 
 /* Set up the loaded object described by L so its unrelocated PLT

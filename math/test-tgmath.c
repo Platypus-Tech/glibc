@@ -1,8 +1,6 @@
 /* Test compilation of tgmath macros.
    Copyright (C) 2001-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
-   Contributed by Jakub Jelinek <jakub@redhat.com> and
-   Ulrich Drepper <drepper@redhat.com>, 2001.
 
    The GNU C Library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -50,7 +48,7 @@ volatile int count_cdouble;
 volatile int count_cfloat;
 volatile int count_cldouble;
 
-#define NCALLS     132
+#define NCALLS     158
 #define NCALLS_INT 4
 #define NCCALLS    47
 
@@ -255,6 +253,7 @@ F(compile_test) (void)
   a = log1p (log1p (x));
   b = logb (logb (a));
   a = exp2 (exp2 (x));
+  a = exp10 (exp10 (x));
   b = log2 (log2 (a));
   a = pow (pow (x, a), pow (c, b));
   b = sqrt (sqrt (a));
@@ -292,6 +291,14 @@ F(compile_test) (void)
   a = fmin (fmin (x, a), fmin (c, b));
   b = fmaxmag (fmaxmag (a, x), fmaxmag (c, b));
   a = fminmag (fminmag (x, a), fminmag (c, b));
+  b = fmaximum (fmaximum (a, x), fmaximum (c, b));
+  a = fminimum (fminimum (x, a), fminimum (c, b));
+  b = fmaximum_num (fmaximum_num (a, x), fmaximum_num (c, b));
+  a = fminimum_num (fminimum_num (x, a), fminimum_num (c, b));
+  b = fmaximum_mag (fmaximum_mag (a, x), fmaximum_mag (c, b));
+  a = fminimum_mag (fminimum_mag (x, a), fminimum_mag (c, b));
+  b = fmaximum_mag_num (fmaximum_mag_num (a, x), fmaximum_mag_num (c, b));
+  a = fminimum_mag_num (fminimum_mag_num (x, a), fminimum_mag_num (c, b));
   b = fma (sin (a), sin (x), sin (c));
 
 #ifdef TEST_INT
@@ -359,6 +366,7 @@ F(compile_test) (void)
       a = log1p (y);
       a = logb (y);
       a = exp2 (y);
+      a = exp10 (y);
       a = log2 (y);
       a = pow (y, y);
       a = sqrt (y);
@@ -395,6 +403,14 @@ F(compile_test) (void)
       a = fmin (y, y);
       a = fmaxmag (y, y);
       a = fminmag (y, y);
+      a = fmaximum (y, y);
+      a = fminimum (y, y);
+      a = fmaximum_num (y, y);
+      a = fminimum_num (y, y);
+      a = fmaximum_mag (y, y);
+      a = fminimum_mag (y, y);
+      a = fmaximum_mag_num (y, y);
+      a = fminimum_mag_num (y, y);
       a = fma (y, y, y);
 
 #ifdef TEST_INT
@@ -595,6 +611,14 @@ TYPE
 
 TYPE
 (F(logb)) (TYPE x)
+{
+  ++count;
+  P ();
+  return x;
+}
+
+TYPE
+(F(exp10)) (TYPE x)
 {
   ++count;
   P ();
@@ -939,6 +963,70 @@ TYPE
 
 TYPE
 (F(fmaxmag)) (TYPE x, TYPE y)
+{
+  ++count;
+  P ();
+  return x + y;
+}
+
+TYPE
+(F(fminimum)) (TYPE x, TYPE y)
+{
+  ++count;
+  P ();
+  return x + y;
+}
+
+TYPE
+(F(fmaximum)) (TYPE x, TYPE y)
+{
+  ++count;
+  P ();
+  return x + y;
+}
+
+TYPE
+(F(fminimum_num)) (TYPE x, TYPE y)
+{
+  ++count;
+  P ();
+  return x + y;
+}
+
+TYPE
+(F(fmaximum_num)) (TYPE x, TYPE y)
+{
+  ++count;
+  P ();
+  return x + y;
+}
+
+TYPE
+(F(fminimum_mag)) (TYPE x, TYPE y)
+{
+  ++count;
+  P ();
+  return x + y;
+}
+
+TYPE
+(F(fmaximum_mag)) (TYPE x, TYPE y)
+{
+  ++count;
+  P ();
+  return x + y;
+}
+
+TYPE
+(F(fminimum_mag_num)) (TYPE x, TYPE y)
+{
+  ++count;
+  P ();
+  return x + y;
+}
+
+TYPE
+(F(fmaximum_mag_num)) (TYPE x, TYPE y)
 {
   ++count;
   P ();

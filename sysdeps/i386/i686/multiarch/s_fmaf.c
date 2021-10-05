@@ -1,6 +1,5 @@
 /* Multiple versions of fmaf.
    Copyright (C) 2010-2021 Free Software Foundation, Inc.
-   Contributed by Intel Corporation.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -17,6 +16,7 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
+#define NO_MATH_REDIRECT
 #include <config.h>
 
 #include <math.h>

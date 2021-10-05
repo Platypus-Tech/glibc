@@ -207,14 +207,17 @@ __pthread_create_internal (struct __pthread **thread,
      creating thread.  The set of signals pending for the new thread
      shall be empty."  If the currnet thread is not a pthread then we
      just inherit the process' sigmask.  */
-  if (__pthread_num_threads == 1)
+  if (GL (dl_pthread_num_threads) == 1)
     err = __sigprocmask (0, 0, &pthread->init_sigset);
   else
     err = __pthread_sigstate (_pthread_self (), 0, 0, &pthread->init_sigset, 0);
   assert_perror (err);
 
-  /* But block the signals for now, until the thread is fully initialized.  */
-  __sigfillset (&sigset);
+  if (start_routine)
+    /* But block the signals for now, until the thread is fully initialized.  */
+    __sigfillset (&sigset);
+  else
+    sigset = pthread->init_sigset;
   err = __pthread_sigstate (pthread, SIG_SETMASK, &sigset, 0, 1);
   assert_perror (err);
 
@@ -231,9 +234,9 @@ __pthread_create_internal (struct __pthread **thread,
      could use __thread_setid, however, we only lock for reading as no
      other thread should be using this entry (we also assume that the
      store is atomic).  */
-  __pthread_rwlock_rdlock (&__pthread_threads_lock);
-  __pthread_threads[pthread->thread - 1] = pthread;
-  __pthread_rwlock_unlock (&__pthread_threads_lock);
+  __libc_rwlock_rdlock (GL (dl_pthread_threads_lock));
+  GL (dl_pthread_threads)[pthread->thread - 1] = pthread;
+  __libc_rwlock_unlock (GL (dl_pthread_threads_lock));
 
   /* At this point it is possible to guess our pthread ID.  We have to
      make sure that all functions taking a pthread_t argument can

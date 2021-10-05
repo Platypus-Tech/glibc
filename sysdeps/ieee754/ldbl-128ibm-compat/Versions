@@ -123,6 +123,20 @@ libm {
     __y1ieee128;
     __ynieee128;
   }
+  GLIBC_2.35 {
+    __f32fmaieee128;
+    __f64fmaieee128;
+    __f32sqrtieee128;
+    __f64sqrtieee128;
+    __fmaximumieee128;
+    __fmaximum_numieee128;
+    __fmaximum_magieee128;
+    __fmaximum_mag_numieee128;
+    __fminimumieee128;
+    __fminimum_numieee128;
+    __fminimum_magieee128;
+    __fminimum_mag_numieee128;
+  }
 }
 libc {
   LDBL_IBM128_VERSION {

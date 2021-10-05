@@ -63,9 +63,11 @@ libsupport-routines = \
   support_format_hostent \
   support_format_netent \
   support_isolate_in_subprocess \
+  support_mutex_pi_monotonic \
   support_path_support_time64 \
   support_process_state \
   support_ptrace \
+  support-open-dev-null-range \
   support_openpty \
   support_paths \
   support_quote_blob \
@@ -82,9 +84,10 @@ libsupport-routines = \
   support_test_compare_blob \
   support_test_compare_failure \
   support_test_compare_string \
-  support_write_file_string \
   support_test_main \
   support_test_verify_impl \
+  support_wait_for_thread_exit \
+  support_write_file_string \
   temp_file \
   timespec \
   timespec-time64 \
@@ -264,6 +267,7 @@ tests = \
   tst-support_capture_subprocess \
   tst-support_descriptors \
   tst-support_format_dns_packet \
+  tst-support-open-dev-null-range \
   tst-support-process_state \
   tst-support_quote_blob \
   tst-support_quote_string \

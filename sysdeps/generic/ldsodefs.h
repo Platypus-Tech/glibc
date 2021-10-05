@@ -75,11 +75,8 @@ __BEGIN_DECLS
   have to be accessed via the D_PTR macro.  The macro is needed since for
   most architectures the entry is already relocated - but for some not
   and we need to relocate at access time.  */
-#ifdef DL_RO_DYN_SECTION
-# define D_PTR(map, i) ((map)->i->d_un.d_ptr + (map)->l_addr)
-#else
-# define D_PTR(map, i) (map)->i->d_un.d_ptr
-#endif
+#define D_PTR(map, i) \
+  ((map)->i->d_un.d_ptr + (dl_relocate_ld (map) ? 0 : (map)->l_addr))
 
 /* Result of the lookup functions and how to retrieve the base address.  */
 typedef struct link_map *lookup_t;
@@ -355,7 +352,7 @@ struct rtld_global
       void (*free) (void *);
     } _ns_unique_sym_table;
     /* Keep track of changes to each namespace' list.  */
-    struct r_debug _ns_debug;
+    struct r_debug_extended _ns_debug;
   } _dl_ns[DL_NNS];
   /* One higher than index of last used namespace.  */
   EXTERN size_t _dl_nns;
@@ -372,6 +369,13 @@ struct rtld_global
      list of loaded objects while an object is added to or removed
      from that list.  */
   __rtld_lock_define_recursive (EXTERN, _dl_load_write_lock)
+  /* This lock protects global and module specific TLS related data.
+     E.g. it is held in dlopen and dlclose when GL(dl_tls_generation),
+     GL(dl_tls_max_dtv_idx) or GL(dl_tls_dtv_slotinfo_list) are
+     accessed and when TLS related relocations are processed for a
+     module.  It was introduced to keep pthread_create accessing TLS
+     state that is being set up.  */
+  __rtld_lock_define_recursive (EXTERN, _dl_load_tls_lock)
 
   /* Incremented whenever something may have been added to dl_loaded.  */
   EXTERN unsigned long long _dl_load_adds;
@@ -456,7 +460,7 @@ struct rtld_global
   /* Generation counter for the dtv.  */
   EXTERN size_t _dl_tls_generation;
 
-#if !THREAD_GSCOPE_IN_TCB
+#if !PTHREAD_IN_LIBC
   EXTERN void (*_dl_init_static_tls) (struct link_map *);
 #endif
 
@@ -466,7 +470,7 @@ struct rtld_global
     size_t count;
     void *list[50];
   } *_dl_scope_free_list;
-#if THREAD_GSCOPE_IN_TCB
+#if PTHREAD_IN_LIBC
   /* List of active thread stacks, with memory managed by glibc.  */
   EXTERN list_t _dl_stack_used;
 
@@ -487,7 +491,13 @@ struct rtld_global
   /* Mutex protecting the stack lists.  */
   EXTERN int _dl_stack_cache_lock;
 #else
-  EXTERN int _dl_thread_gscope_count;
+  /* The total number of thread IDs currently in use, or on the list of
+     available thread IDs.  */
+  EXTERN int _dl_pthread_num_threads;
+
+  /* Array of __pthread structures and its lock.  */
+  EXTERN struct __pthread **_dl_pthread_threads;
+  __libc_rwlock_define (EXTERN, _dl_pthread_threads_lock)
 #endif
 #ifdef SHARED
 };
@@ -1093,11 +1103,15 @@ extern void _dl_sort_maps (struct link_map **maps, unsigned int nmaps,
 extern void _dl_debug_state (void);
 rtld_hidden_proto (_dl_debug_state)
 
-/* Initialize `struct r_debug' if it has not already been done.  The
-   argument is the run-time load address of the dynamic linker, to be put
-   in the `r_ldbase' member.  Returns the address of the structure.  */
+/* Initialize `struct r_debug_extended' for the namespace NS.  LDBASE
+   is the run-time load address of the dynamic linker, to be put in the
+   `r_ldbase' member.  Return the address of the structure.  */
 extern struct r_debug *_dl_debug_initialize (ElfW(Addr) ldbase, Lmid_t ns)
      attribute_hidden;
+
+/* Update the `r_map' member and return the address of `struct r_debug'
+   of the namespace NS.  */
+extern struct r_debug *_dl_debug_update (Lmid_t ns) attribute_hidden;
 
 /* Initialize the basic data structure for the search paths.  SOURCE
    is either "LD_LIBRARY_PATH" or "--library-path".
@@ -1261,7 +1275,7 @@ extern int _dl_scope_free (void *) attribute_hidden;
 
 /* Add module to slot information data.  If DO_ADD is false, only the
    required memory is allocated.  Must be called with GL
-   (dl_load_lock) acquired.  If the function has already been called
+   (dl_load_tls_lock) acquired.  If the function has already been called
    for the link map L with !do_add, then this function will not raise
    an exception, otherwise it is possible that it encounters a memory
    allocation failure.  */
@@ -1297,13 +1311,13 @@ extern void _dl_aux_init (ElfW(auxv_t) *av)
 
 /* Initialize the static TLS space for the link map in all existing
    threads. */
-#if THREAD_GSCOPE_IN_TCB
+#if PTHREAD_IN_LIBC
 void _dl_init_static_tls (struct link_map *map) attribute_hidden;
 #endif
 static inline void
 dl_init_static_tls (struct link_map *map)
 {
-#if THREAD_GSCOPE_IN_TCB
+#if PTHREAD_IN_LIBC
   /* The stack list is available to ld.so, so the initialization can
      be handled within ld.so directly.  */
   _dl_init_static_tls (map);
@@ -1371,10 +1385,8 @@ __rtld_mutex_init (void)
 }
 #endif /* !PTHREAD_IN_LIBC */
 
-#if THREAD_GSCOPE_IN_TCB
 void __thread_gscope_wait (void) attribute_hidden;
 # define THREAD_GSCOPE_WAIT() __thread_gscope_wait ()
-#endif
 
 __END_DECLS
 

@@ -35,7 +35,8 @@ dl-routines	= $(addprefix dl-,load lookup object reloc deps \
 				  execstack open close trampoline \
 				  exception sort-maps lookup-direct \
 				  call-libc-early-init write \
-				  thread_gscope_wait tls_init_tp)
+				  thread_gscope_wait tls_init_tp \
+				  debug-symbols)
 ifeq (yes,$(use-ldconfig))
 dl-routines += dl-cache
 endif
@@ -163,7 +164,7 @@ tests-static-normal := tst-array1-static tst-array5-static \
 	       tst-single_threaded-static tst-single_threaded-pthread-static \
 	       tst-dst-static tst-getauxval-static
 
-tests-static-internal := tst-tls1-static tst-tls2-static \
+tests-static-internal := tst-tls1-static \
 	       tst-ptrguard1-static tst-stackguard1-static \
 	       tst-tls1-static-non-pie
 
@@ -183,7 +184,7 @@ endif
 tests := tst-tls9 tst-leaks1 \
 	tst-array1 tst-array2 tst-array3 tst-array4 tst-array5 \
 	tst-auxv tst-stringtable
-tests-internal := tst-tls1 tst-tls2 $(tests-static-internal)
+tests-internal := tst-tls1 $(tests-static-internal)
 tests-static := $(tests-static-normal) $(tests-static-internal)
 
 ifeq (yes,$(build-shared))
@@ -203,7 +204,7 @@ tests += restest1 preloadtest loadfail multiload origtest resolvfail \
 	 tst-tls16 tst-tls17 tst-tls18 tst-tls19 tst-tls-dlinfo \
 	 tst-align tst-align2 \
 	 tst-dlmodcount tst-dlopenrpath tst-deep1 \
-	 tst-dlmopen1 tst-dlmopen3 \
+	 tst-dlmopen1 tst-dlmopen3 tst-dlmopen4 \
 	 unload3 unload4 unload5 unload6 unload7 unload8 tst-global1 order2 \
 	 tst-audit1 tst-audit2 tst-audit8 tst-audit9 \
 	 tst-addr1 tst-thrlock \
@@ -219,12 +220,11 @@ tests += restest1 preloadtest loadfail multiload origtest resolvfail \
 	 tst-dlopen-self tst-auditmany tst-initfinilazyfail tst-dlopenfail \
 	 tst-dlopenfail-2 \
 	 tst-filterobj tst-filterobj-dlopen tst-auxobj tst-auxobj-dlopen \
-	 tst-audit14 tst-audit15 tst-audit16 \
 	 tst-single_threaded tst-single_threaded-pthread \
 	 tst-tls-ie tst-tls-ie-dlmopen argv0test \
 	 tst-glibc-hwcaps tst-glibc-hwcaps-prepend tst-glibc-hwcaps-mask \
 	 tst-tls20 tst-tls21 tst-dlmopen-dlerror tst-dlmopen-gethostbyname \
-	 tst-dl-is_dso
+	 tst-dl-is_dso tst-ro-dynamic
 #	 reldep9
 tests-internal += loadtest unload unload2 circleload1 \
 	 neededtest neededtest2 neededtest3 neededtest4 \
@@ -237,6 +237,9 @@ test-srcs = tst-pathopt
 selinux-enabled := $(shell cat /selinux/enforce 2> /dev/null)
 ifneq ($(selinux-enabled),1)
 tests-execstack-yes = tst-execstack tst-execstack-needed tst-execstack-prog
+endif
+ifeq ($(have-depaudit),yes)
+tests += tst-audit14 tst-audit15 tst-audit16
 endif
 endif
 tests += $(tests-execstack-$(have-z-execstack))
@@ -357,7 +360,7 @@ modules-names = testobj1 testobj2 testobj3 testobj4 testobj5 testobj6 \
 		libmarkermod4-1 libmarkermod4-2 libmarkermod4-3 libmarkermod4-4 \
 		tst-tls20mod-bad tst-tls21mod tst-dlmopen-dlerror-mod \
 		tst-auxvalmod \
-		tst-dlmopen-gethostbyname-mod \
+		tst-dlmopen-gethostbyname-mod tst-ro-dynamic-mod \
 
 # Most modules build with _ISOMAC defined, but those filtered out
 # depend on internal headers.
@@ -399,8 +402,9 @@ endif
 modules-execstack-yes = tst-execstack-mod
 extra-test-objs += $(addsuffix .os,$(strip $(modules-names)))
 
-# filtmod1.so, tst-big-note-lib.so have special rules.
-modules-names-nobuild := filtmod1 tst-big-note-lib
+# filtmod1.so, tst-big-note-lib.so, tst-ro-dynamic-mod.so have special
+# rules.
+modules-names-nobuild := filtmod1 tst-big-note-lib tst-ro-dynamic-mod
 
 tests += $(tests-static)
 
@@ -1242,6 +1246,8 @@ $(objpfx)tst-dlmopen2.out: $(objpfx)tst-dlmopen1mod.so
 
 $(objpfx)tst-dlmopen3.out: $(objpfx)tst-dlmopen1mod.so
 
+$(objpfx)tst-dlmopen4.out: $(objpfx)tst-dlmopen1mod.so
+
 $(objpfx)tst-audit1.out: $(objpfx)tst-auditmod1.so
 tst-audit1-ENV = LD_AUDIT=$(objpfx)tst-auditmod1.so
 
@@ -1475,6 +1481,16 @@ $(objpfx)tst-auditlogmod-3.so: $(libsupport)
 $(objpfx)tst-audit16.out: \
   $(objpfx)tst-auditlogmod-1.so $(objpfx)tst-auditlogmod-2.so \
   $(objpfx)tst-auditlogmod-3.so
+$(objpfx)tst-audit17.out: $(objpfx)tst-auditmod17.so
+# The test check if a audit library without libc.so on DT_NEEDED works as
+# intended, so it uses an explicit link rule.
+$(objpfx)tst-auditmod17.so: $(objpfx)tst-auditmod17.os
+	$(CC) -nostdlib -nostartfiles -shared -o $@.new \
+	$(filter-out $(map-file),$^)
+	$(call after-link,$@.new)
+	mv -f $@.new $@
+CFLAGS-.os += $(call elide-stack-protector,.os,tst-auditmod17)
+tst-audit17-ENV = LD_AUDIT=$(objpfx)tst-auditmod17.so
 
 # tst-sonamemove links against an older implementation of the library.
 LDFLAGS-tst-sonamemove-linkmod1.so = \
@@ -1896,3 +1912,10 @@ $(objpfx)tst-getauxval-static.out: $(objpfx)tst-auxvalmod.so
 tst-getauxval-static-ENV = LD_LIBRARY_PATH=$(objpfx):$(common-objpfx)
 
 $(objpfx)tst-dlmopen-gethostbyname.out: $(objpfx)tst-dlmopen-gethostbyname-mod.so
+
+$(objpfx)tst-ro-dynamic: $(objpfx)tst-ro-dynamic-mod.so
+$(objpfx)tst-ro-dynamic-mod.so: $(objpfx)tst-ro-dynamic-mod.os \
+  tst-ro-dynamic-mod.map
+	$(LINK.o) -nostdlib -nostartfiles -shared -o $@ \
+		-Wl,--script=tst-ro-dynamic-mod.map \
+		$(objpfx)tst-ro-dynamic-mod.os

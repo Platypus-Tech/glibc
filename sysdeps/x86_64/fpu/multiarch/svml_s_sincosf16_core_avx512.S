@@ -50,9 +50,6 @@
 
 	.text
 ENTRY (_ZGVeN16vl4l4_sincosf_knl)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512_fFF _ZGVdN8vl4l4_sincosf
-#else
         pushq     %rbp
         cfi_adjust_cfa_offset (8)
         cfi_rel_offset (%rbp, 0)
@@ -266,14 +263,10 @@ WRAPPER_IMPL_AVX512_fFF _ZGVdN8vl4l4_sincosf
 
         vmovss    %xmm0, 1280(%rsp,%r15,8)
         jmp       .LBL_1_7
-#endif
 END (_ZGVeN16vl4l4_sincosf_knl)
 libmvec_hidden_def(_ZGVeN16vl4l4_sincosf_knl)
 
 ENTRY (_ZGVeN16vl4l4_sincosf_skx)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512_fFF _ZGVdN8vvv_sincosf
-#else
         pushq     %rbp
         cfi_adjust_cfa_offset (8)
         cfi_rel_offset (%rbp, 0)
@@ -317,7 +310,7 @@ WRAPPER_IMPL_AVX512_fFF _ZGVdN8vvv_sincosf
 
 /* Result sign calculations */
         vpternlogd $150, %zmm0, %zmm14, %zmm1
-        vmovups   .L_2il0floatpacket.13(%rip), %zmm14
+        vpternlogd $0xff, %zmm14, %zmm14, %zmm14
 
 /* Add correction term 0.5 for cos() part */
         vaddps    %zmm8, %zmm5, %zmm15
@@ -496,7 +489,6 @@ WRAPPER_IMPL_AVX512_fFF _ZGVdN8vvv_sincosf
 
         vmovss    %xmm0, 1280(%rsp,%r15,8)
         jmp       .LBL_2_7
-#endif
 END (_ZGVeN16vl4l4_sincosf_skx)
 libmvec_hidden_def(_ZGVeN16vl4l4_sincosf_skx)
 
@@ -748,8 +740,3 @@ END (_ZGVeN16vvv_sincosf_knl)
 ENTRY (_ZGVeN16vvv_sincosf_skx)
 WRAPPER_AVX512_vvv_vl4l4 _ZGVeN16vl4l4_sincosf_skx
 END (_ZGVeN16vvv_sincosf_skx)
-
-	.section .rodata, "a"
-.L_2il0floatpacket.13:
-	.long	0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff
-	.type	.L_2il0floatpacket.13,@object

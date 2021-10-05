@@ -350,7 +350,9 @@ class Context(object):
                         gcc_cfg=['--disable-multilib', '--enable-secureplt'])
         self.add_config(arch='powerpc64le',
                         os_name='linux-gnu',
-                        gcc_cfg=['--disable-multilib', '--enable-secureplt'])
+                        gcc_cfg=['--disable-multilib', '--enable-secureplt'],
+                        extra_glibcs=[{'variant': 'disable-multi-arch',
+                                       'cfg': ['--disable-multi-arch']}])
         self.add_config(arch='riscv32',
                         os_name='linux-gnu',
                         variant='rv32imac-ilp32',
@@ -778,11 +780,11 @@ class Context(object):
 
     def checkout(self, versions):
         """Check out the desired component versions."""
-        default_versions = {'binutils': 'vcs-2.36',
+        default_versions = {'binutils': 'vcs-2.37',
                             'gcc': 'vcs-11',
                             'glibc': 'vcs-mainline',
                             'gmp': '6.2.1',
-                            'linux': '5.13',
+                            'linux': '5.14',
                             'mpc': '1.2.1',
                             'mpfr': '4.1.0',
                             'mig': 'vcs-mainline',
@@ -1553,15 +1555,13 @@ class GlibcPolicyForBuild(GlibcPolicyDefault):
 
     def extra_commands(self, cmdlist):
         if self.strip:
-            # Avoid picking up libc.so and libpthread.so, which are
-            # linker scripts stored in /lib on Hurd.  libc and
-            # libpthread are still stripped via their libc-X.YY.so
-            # implementation files.
-            find_command = (('find %s/lib* -name "*.so"'
-                             + r' \! -name libc.so \! -name libpthread.so')
-                            % self.installdir)
-            cmdlist.add_command('strip', ['sh', '-c', ('%s $(%s)' %
-                                  (self.strip, find_command))])
+            # Avoid stripping libc.so and libpthread.so, which are
+            # linker scripts stored in /lib on Hurd.
+            find_command = 'find %s/lib* -name "*.so*"' % self.installdir
+            cmdlist.add_command('strip', ['sh', '-c', (
+                'set -e; for f in $(%s); do '
+                'if ! head -c16 $f | grep -q "GNU ld script"; then %s $f; fi; '
+                'done' % (find_command, self.strip))])
         cmdlist.add_command('check', ['make', 'check'])
         cmdlist.add_command('save-logs', [self.save_logs], always_run=True)
 

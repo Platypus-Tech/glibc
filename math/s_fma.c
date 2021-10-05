@@ -1,7 +1,6 @@
 /* Compute x * y + z as ternary operation.
    Copyright (C) 1997-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
-   Contributed by Ulrich Drepper <drepper@cygnus.com>, 1997.
 
    The GNU C Library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -17,8 +16,14 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
+#define NO_MATH_REDIRECT
+#define dfmal __hide_dfmal
+#define f32xfmaf64 __hide_f32xfmaf64
 #include <math.h>
+#undef dfmal
+#undef f32xfmaf64
 #include <libm-alias-double.h>
+#include <math-narrow-alias.h>
 
 double
 __fma (double x, double y, double z)
@@ -27,4 +32,5 @@ __fma (double x, double y, double z)
 }
 #ifndef __fma
 libm_alias_double (__fma, fma)
+libm_alias_double_narrow (__fma, fma)
 #endif

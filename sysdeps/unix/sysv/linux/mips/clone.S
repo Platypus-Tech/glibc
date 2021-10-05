@@ -1,6 +1,5 @@
 /* Copyright (C) 1996-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
-   Contributed by Ralf Bächle <ralf@linux-mips.org>, 1996.
 
    The GNU C Library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -55,6 +54,13 @@ NESTED(__clone,4*SZREG,sp)
 	.set		at
 #endif
 
+	/* Align stack to 8/16 bytes per the ABI.  */
+#if _MIPS_SIM == _ABIO32
+	li		t0,-8
+#else
+	li		t0,-16
+#endif
+	and		a1,a1,t0
 
 	/* Sanity check arguments.  */
 	li		v0,EINVAL

@@ -22,9 +22,6 @@
 
 	.text
 ENTRY (_ZGVeN8v_sin_knl)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512 _ZGVdN4v_sin
-#else
 /*
    ALGORITHM DESCRIPTION:
 
@@ -233,13 +230,9 @@ WRAPPER_IMPL_AVX512 _ZGVdN4v_sin
         call      JUMPTARGET(sin)
         vmovsd    %xmm0, 1216(%rsp,%r15)
         jmp       .LBL_1_7
-#endif
 END (_ZGVeN8v_sin_knl)
 
 ENTRY (_ZGVeN8v_sin_skx)
-#ifndef HAVE_AVX512DQ_ASM_SUPPORT
-WRAPPER_IMPL_AVX512 _ZGVdN4v_sin
-#else
 /*
    ALGORITHM DESCRIPTION:
 
@@ -261,7 +254,7 @@ WRAPPER_IMPL_AVX512 _ZGVdN4v_sin
         andq      $-64, %rsp
         subq      $1280, %rsp
         movq      __svml_d_trig_data@GOTPCREL(%rip), %rax
-        vpbroadcastq .L_2il0floatpacket.14(%rip), %zmm14
+        vpternlogd $0xff, %zmm1, %zmm1, %zmm14
         vmovups __dAbsMask(%rax), %zmm7
         vmovups __dInvPI(%rax), %zmm2
         vmovups __dRShifter(%rax), %zmm1
@@ -456,10 +449,4 @@ WRAPPER_IMPL_AVX512 _ZGVdN4v_sin
 
         vmovsd    %xmm0, 1216(%rsp,%r15)
         jmp       .LBL_2_7
-#endif
 END (_ZGVeN8v_sin_skx)
-
-	.section .rodata, "a"
-.L_2il0floatpacket.14:
-	.long	0xffffffff,0xffffffff
-	.type	.L_2il0floatpacket.14,@object

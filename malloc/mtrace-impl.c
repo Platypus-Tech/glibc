@@ -1,8 +1,6 @@
 /* mtrace implementation for `malloc'.
    Copyright (C) 1991-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
-                 Written April 2, 1991 by John Gilmore of Cygnus Support.
-                 Based on mcheck.c by Mike Haertel.
 
    The GNU C Library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -34,11 +32,8 @@
 
 #include <kernel-features.h>
 
-#define TRACE_BUFFER_SIZE 512
-
 static FILE *mallstream;
 static const char mallenv[] = "MALLOC_TRACE";
-static char *malloc_trace_buffer;
 
 static void
 tr_where (const void *caller, Dl_info *info)
@@ -68,9 +63,9 @@ tr_where (const void *caller, Dl_info *info)
 		       offset);
             }
 
-	  fprintf (mallstream, "@ %s%s%s[%p] ", info->dli_fname ? : "",
-		   info->dli_fname ? ":" : "",
-                   buf, caller);
+	  fprintf (mallstream, "@ %s%s%s[0x%" PRIxPTR "] ",
+		   info->dli_fname ? : "", info->dli_fname ? ":" : "", buf,
+		   caller - info->dli_fbase);
         }
       else
         fprintf (mallstream, "@ [%p] ", caller);
@@ -184,16 +179,13 @@ do_mtrace (void)
   mallfile = secure_getenv (mallenv);
   if (mallfile != NULL)
     {
-      char *mtb = malloc (TRACE_BUFFER_SIZE);
-      if (mtb == NULL)
-        return;
-
       mallstream = fopen (mallfile != NULL ? mallfile : "/dev/null", "wce");
       if (mallstream != NULL)
         {
           /* Be sure it doesn't malloc its buffer!  */
-          malloc_trace_buffer = mtb;
-          setvbuf (mallstream, malloc_trace_buffer, _IOFBF, TRACE_BUFFER_SIZE);
+	  static char tracebuf [512];
+
+	  setvbuf (mallstream, tracebuf, _IOFBF, sizeof (tracebuf));
           fprintf (mallstream, "= Start\n");
           if (!added_atexit_handler)
             {
@@ -203,8 +195,6 @@ do_mtrace (void)
             }
 	  __malloc_debug_enable (MALLOC_MTRACE_HOOK);
         }
-      else
-        free (mtb);
     }
 }
 

@@ -1,7 +1,6 @@
 /* Malloc implementation for multiple threads without lock contention.
    Copyright (C) 2001-2021 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
-   Contributed by Wolfram Gloger <wg@malloc.de>, 2001.
 
    The GNU C Library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public License as
@@ -879,7 +878,7 @@ arena_get2 (size_t size, mstate avoid_arena)
             narenas_limit = mp_.arena_max;
           else if (narenas > mp_.arena_test)
             {
-              int n = __get_nprocs ();
+              int n = __get_nprocs_sched ();
 
               if (n >= 1)
                 narenas_limit = NARENAS_FROM_NCORES (n);

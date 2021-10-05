@@ -500,7 +500,7 @@ _dl_close_worker (struct link_map *map, bool force)
 #endif
 
   /* Notify the debugger we are about to remove some loaded objects.  */
-  struct r_debug *r = _dl_debug_initialize (0, nsid);
+  struct r_debug *r = _dl_debug_update (nsid);
   r->r_state = RT_DELETE;
   _dl_debug_state ();
   LIBC_PROBE (unmap_start, 2, nsid, r);
@@ -548,6 +548,9 @@ _dl_close_worker (struct link_map *map, bool force)
   size_t tls_free_start;
   size_t tls_free_end;
   tls_free_start = tls_free_end = NO_TLS_OFFSET;
+
+  /* Protects global and module specitic TLS state.  */
+  __rtld_lock_lock_recursive (GL(dl_load_tls_lock));
 
   /* We modify the list of loaded objects.  */
   __rtld_lock_lock_recursive (GL(dl_load_write_lock));
@@ -783,6 +786,9 @@ _dl_close_worker (struct link_map *map, bool force)
       if (tls_free_end == GL(dl_tls_static_used))
 	GL(dl_tls_static_used) = tls_free_start;
     }
+
+  /* TLS is cleaned up for the unloaded modules.  */
+  __rtld_lock_unlock_recursive (GL(dl_load_tls_lock));
 
 #ifdef SHARED
   /* Auditing checkpoint: we have deleted all objects.  */

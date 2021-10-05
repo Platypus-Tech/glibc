@@ -322,6 +322,7 @@ struct rtld_global _rtld_global =
 #ifdef _LIBC_REENTRANT
     ._dl_load_lock = _RTLD_LOCK_RECURSIVE_INITIALIZER,
     ._dl_load_write_lock = _RTLD_LOCK_RECURSIVE_INITIALIZER,
+    ._dl_load_tls_lock = _RTLD_LOCK_RECURSIVE_INITIALIZER,
 #endif
     ._dl_nns = 1,
     ._dl_ns =
@@ -463,6 +464,7 @@ _dl_start_final (void *arg, struct dl_start_final_info *info)
 #ifndef DONT_USE_BOOTSTRAP_MAP
   GL(dl_rtld_map).l_addr = info->l.l_addr;
   GL(dl_rtld_map).l_ld = info->l.l_ld;
+  GL(dl_rtld_map).l_ld_readonly = info->l.l_ld_readonly;
   memcpy (GL(dl_rtld_map).l_info, info->l.l_info,
 	  sizeof GL(dl_rtld_map).l_info);
   GL(dl_rtld_map).l_mach = info->l.l_mach;
@@ -546,7 +548,7 @@ _dl_start (void *arg)
 
   /* Read our own dynamic section and fill in the info array.  */
   bootstrap_map.l_ld = (void *) bootstrap_map.l_addr + elf_machine_dynamic ();
-  elf_get_dynamic_info (&bootstrap_map, NULL);
+  elf_get_dynamic_info (&bootstrap_map);
 
 #if NO_TLS_OFFSET != 0
   bootstrap_map.l_tls_offset = NO_TLS_OFFSET;
@@ -1468,6 +1470,7 @@ dl_main (const ElfW(Phdr) *phdr,
 	/* This tells us where to find the dynamic section,
 	   which tells us everything we need to do.  */
 	main_map->l_ld = (void *) main_map->l_addr + ph->p_vaddr;
+	main_map->l_ld_readonly = (ph->p_flags & PF_W) == 0;
 	break;
       case PT_INTERP:
 	/* This "interpreter segment" was used by the program loader to
@@ -1613,7 +1616,7 @@ dl_main (const ElfW(Phdr) *phdr,
   if (! rtld_is_main)
     {
       /* Extract the contents of the dynamic section for easy access.  */
-      elf_get_dynamic_info (main_map, NULL);
+      elf_get_dynamic_info (main_map);
 
       /* If the main map is libc.so, update the base namespace to
 	 refer to this map.  If libc.so is loaded later, this happens
@@ -1660,7 +1663,7 @@ dl_main (const ElfW(Phdr) *phdr,
      objects.  */
   call_init_paths (&state);
 
-  /* Initialize _r_debug.  */
+  /* Initialize _r_debug_extended.  */
   struct r_debug *r = _dl_debug_initialize (GL(dl_rtld_map).l_addr,
 					    LM_ID_BASE);
   r->r_state = RT_CONSISTENT;
@@ -1684,21 +1687,16 @@ dl_main (const ElfW(Phdr) *phdr,
   if (GLRO(dl_use_load_bias) == (ElfW(Addr)) -2)
     GLRO(dl_use_load_bias) = main_map->l_addr == 0 ? -1 : 0;
 
-  /* Set up the program header information for the dynamic linker
-     itself.  It is needed in the dl_iterate_phdr callbacks.  */
-  const ElfW(Ehdr) *rtld_ehdr;
-
   /* Starting from binutils-2.23, the linker will define the magic symbol
      __ehdr_start to point to our own ELF header if it is visible in a
      segment that also includes the phdrs.  If that's not available, we use
      the old method that assumes the beginning of the file is part of the
      lowest-addressed PT_LOAD segment.  */
-#ifdef HAVE_EHDR_START
   extern const ElfW(Ehdr) __ehdr_start __attribute__ ((visibility ("hidden")));
-  rtld_ehdr = &__ehdr_start;
-#else
-  rtld_ehdr = (void *) GL(dl_rtld_map).l_map_start;
-#endif
+
+  /* Set up the program header information for the dynamic linker
+     itself.  It is needed in the dl_iterate_phdr callbacks.  */
+  const ElfW(Ehdr) *rtld_ehdr = &__ehdr_start;
   assert (rtld_ehdr->e_ehsize == sizeof *rtld_ehdr);
   assert (rtld_ehdr->e_phentsize == sizeof (ElfW(Phdr)));
 
@@ -2496,7 +2494,7 @@ dl_main (const ElfW(Phdr) *phdr,
 
   /* Notify the debugger all new objects are now ready to go.  We must re-get
      the address since by now the variable might be in another object.  */
-  r = _dl_debug_initialize (0, LM_ID_BASE);
+  r = _dl_debug_update (LM_ID_BASE);
   r->r_state = RT_CONSISTENT;
   _dl_debug_state ();
   LIBC_PROBE (init_complete, 2, LM_ID_BASE, r);

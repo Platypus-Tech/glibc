@@ -1,6 +1,5 @@
 /* raise.c - Generic raise implementation.
    Copyright (C) 2008-2021 Free Software Foundation, Inc.
-   Written by Neal H. Walfield <neal@gnu.org>.
 
    This file is part of the GNU Hurd.
 
@@ -18,6 +17,7 @@
    License along with this program.  If not, see
    <https://www.gnu.org/licenses/>.  */
 
+#include <ldsodefs.h>
 #include <pthreadP.h>
 #include <signal.h>
 #include <unistd.h>
@@ -25,6 +25,11 @@
 #pragma weak __pthread_kill
 #pragma weak __pthread_self
 #pragma weak __pthread_threads
+
+#ifndef SHARED
+#pragma weak _dl_pthread_threads
+#endif
+
 int
 raise (int signo)
 {
@@ -32,7 +37,7 @@ raise (int signo)
      "the effect of the raise() function shall be equivalent to
      calling: pthread_kill(pthread_self(), sig);"  */
 
-  if (__pthread_kill != NULL && __pthread_threads != NULL)
+  if (__pthread_kill != NULL && GL (dl_pthread_threads) != NULL)
     {
       int err;
       err = __pthread_kill (__pthread_self (), signo);
